@@ -19,6 +19,7 @@
 #include <json.hpp>
 #include <regex>
 #include <iterator>
+#include <THStack.h>
 
 namespace glob {
 namespace details {
@@ -126,14 +127,6 @@ template <> struct hash<SourceSet> {
 };
 }
 
-// struct Histogram{
-//   std::string name;
-//   std::string title,xlabel,ylabel;
-//   std::string form;
-//   // The form of the histogram, how it interprets the input data
-//   TCanvas* histo;
-// };
-
 struct HistogramInfo {
   std::vector<std::string> set_names;
   std::vector<const SourceSet *> sets;
@@ -221,23 +214,30 @@ struct SimpleOverlayPlotter : public Processor {
 
   void createVisual(Histogram &h, const DataOptions &opts) override {
 
-   gStyle->SetPalette(kBird);
-   gStyle->SetOptStat(0);
+    gStyle->SetPalette(kBird);
+    //gStyle->SetOptStat(0);
     auto &sources = h.set->sources;
     const auto &hinfo = *h.hinfo;
     auto legend = new TLegend();
     bool title_set = false;
+    auto stack = new THStack();
     for (const auto &source : sources) {
-      auto hist = (TH1D *)source->file->Get(hinfo.name.c_str());
-      if (!title_set) {
-        hist->SetTitle(hinfo.title.c_str());
-        title_set = true;
+      if (!source->file->GetListOfKeys()->Contains(hinfo.name.c_str())) {
+        throw std::runtime_error(
+            fmt::format("Could not find histogram {}", hinfo.name));
       }
+      auto hist = (TH1D *)source->file->Get(hinfo.name.c_str());
       hist->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
       hist->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
-      hist->Draw("Same PLC PMC");
+      hist->SetMarkerStyle(kPlus);
+      // hist->Draw("Same PLC PMC");
+      stack->Add(hist);
       legend->AddEntry(hist, source->name.c_str());
     }
+    stack->Draw("nostack PLC PMC HIST p");
+    stack->SetTitle(hinfo.title.c_str());
+    stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
+    stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
 
     legend->SetX1(0.7);
     legend->SetY1(0.7);
@@ -249,7 +249,6 @@ struct SimpleOverlayPlotter : public Processor {
 };
 
 int main(int argc, char *argv[]) {
-  std::cout << argv[1] << std::endl;
   std::vector<DataSource> data_sources;
   std::vector<HistogramInfo> histograms;
 
@@ -311,5 +310,6 @@ int main(int argc, char *argv[]) {
     h.canvas->SaveAs(
         (out_dir + "/" + h.hinfo->name + "_" + h.set->name + ".pdf").c_str());
   }
+
   return 0;
 }
