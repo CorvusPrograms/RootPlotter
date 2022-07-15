@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <TH1D.h>
+#include <unordered_set>
 #include <TCanvas.h>
 #include <TGaxis.h>
 #include <TStyle.h>
@@ -38,11 +39,9 @@ inline bool match_impl(const Iterator pattern_begin, const Iterator pattern_end,
   Iterator d_itr = data_begin;
   Iterator np_itr = null_itr;
   Iterator nd_itr = null_itr;
-
   for (;;) {
     if (pattern_end != p_itr) {
       const type c = *(p_itr);
-
       if ((data_end != d_itr) &&
           (Compare::cmp(c, *(d_itr)) || (exactly_one == c))) {
         ++d_itr;
@@ -52,63 +51,57 @@ inline bool match_impl(const Iterator pattern_begin, const Iterator pattern_end,
         while ((pattern_end != p_itr) && (zero_or_more == *(p_itr))) {
           ++p_itr;
         }
-
         const type d = *(p_itr);
-
         while ((data_end != d_itr) &&
                !(Compare::cmp(d, *(d_itr)) || (exactly_one == d))) {
           ++d_itr;
         }
-
-        // set backtrack iterators
         np_itr = p_itr - 1;
         nd_itr = d_itr + 1;
-
         continue;
       }
     } else if (data_end == d_itr)
       return true;
-
     if ((data_end == d_itr) || (null_itr == nd_itr))
       return false;
-
     p_itr = np_itr;
     d_itr = nd_itr;
   }
-
   return true;
 }
-
 typedef char char_t;
-
 struct cs_match {
   static inline bool cmp(const char_t c0, const char_t c1) {
     return (c0 == c1);
   }
 };
-
 struct cis_match {
   static inline bool cmp(const char_t c0, const char_t c1) {
     return (std::tolower(c0) == std::tolower(c1));
   }
 };
-
 } // namespace details
-
 inline bool match(const std::string &s, const std::string &p,
                   const std::string::value_type match_one_or_more = '*',
-                  const std::string::value_type match_exatcly_one = '.') {
+                  const std::string::value_type match_exactly_one = '.') {
   return details::match_impl<details::cs_match>(
       std::begin(p), std::end(p), std::begin(s), std::end(s), match_one_or_more,
-      match_exatcly_one);
+      match_exactly_one);
 }
 
+inline bool isGlob(const std::string &s,
+                   const std::string::value_type match_one_or_more = '*',
+                   const std::string::value_type match_exactly_one = '.') {
+  return s.find(match_exactly_one) != std::string::npos ||
+         s.find(match_one_or_more) != std::string::npos;
+}
 } // namespace glob
 
 struct DataSource {
   std::string path;
   std::string name;
   std::string tags;
+  std::unordered_set<std::string> keys;
   TFile *file;
 };
 
@@ -118,26 +111,27 @@ struct SourceSet {
   std::vector<const DataSource *> sources;
 };
 
-namespace std {
-template <> struct hash<SourceSet> {
-  std::size_t operator()(const SourceSet &ss) {
-    return std::hash<std::string> {}
-    (ss.name);
-  }
-};
-}
-
 struct HistogramInfo {
   std::vector<std::string> set_names;
   std::vector<const SourceSet *> sets;
+
+  struct Instance {
+    HistogramInfo &info;
+    std::string name;
+    int idx_set;
+  };
+  std::vector<std::unique_ptr<Instance> > instances;
+
   std::string name;
   std::string title, xlabel, ylabel;
   std::string form;
+
+  nlohmann::json data;
 };
 
 struct Histogram {
   TCanvas *canvas;
-  const HistogramInfo *hinfo;
+  const HistogramInfo::Instance *hinstance;
   const SourceSet *set;
 };
 
@@ -167,6 +161,7 @@ void from_json(const nlohmann::json &j, HistogramInfo &p) {
   get_toor(j, "xlabel", p.xlabel, p.title);
   get_toor(j, "ylabel", p.ylabel, "Events");
   get_toor(j, "set_names", p.set_names, {});
+  p.data = j;
 }
 
 struct DataOptions {
@@ -183,8 +178,9 @@ std::vector<Histogram> runProcess(Processor *processor,
                                   const DataOptions &opts) {
   std::vector<Histogram> ret;
   for (const auto &hinfo : hinfos) {
-    for (const auto &set : hinfo.sets) {
-      ret.push_back(Histogram{ new TCanvas(), &hinfo, set });
+    for (const auto &instance : hinfo.instances) {
+      ret.push_back(Histogram{ new TCanvas(), instance.get(),
+                               hinfo.sets[instance->idx_set] });
       ret.back();
       processor->createVisual(ret.back(), opts);
     }
@@ -215,18 +211,60 @@ struct SimpleOverlayPlotter : public Processor {
   void createVisual(Histogram &h, const DataOptions &opts) override {
 
     gStyle->SetPalette(kBird);
-    //gStyle->SetOptStat(0);
+    // gStyle->SetOptStat(0);
     auto &sources = h.set->sources;
-    const auto &hinfo = *h.hinfo;
+    const auto &hinfo = h.hinstance->info;
+    const auto &hinstance = *h.hinstance;
     auto legend = new TLegend();
     bool title_set = false;
     auto stack = new THStack();
     for (const auto &source : sources) {
-      if (!source->file->GetListOfKeys()->Contains(hinfo.name.c_str())) {
+      if (!source->file->GetListOfKeys()->Contains(hinstance.name.c_str())) {
         throw std::runtime_error(
             fmt::format("Could not find histogram {}", hinfo.name));
       }
-      auto hist = (TH1D *)source->file->Get(hinfo.name.c_str());
+      auto hist = (TH1D *)source->file->Get(hinstance.name.c_str());
+      hist->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
+      hist->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
+      hist->SetMarkerStyle(kPlus);
+      // hist->Draw("Same PLC PMC");
+      stack->Add(hist);
+      legend->AddEntry(hist, source->name.c_str());
+    }
+    stack->Draw("nostack PLC PMC HIST p");
+    stack->SetTitle(hinfo.title.c_str());
+    stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
+    stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
+
+    legend->SetX1(0.7);
+    legend->SetY1(0.7);
+    legend->SetX2(0.85);
+    legend->SetY2(0.85);
+    legend->SetHeader("Samples", "C");
+    legend->Draw();
+  }
+};
+
+struct StackPlotter : public Processor {
+  void createVisual(Histogram &h, const DataOptions &opts) override {
+    gStyle->SetPalette(kBird);
+    // gStyle->SetOptStat(0);
+    auto &sources = h.set->sources;
+    const auto &hinfo = h.hinstance->info;
+    const auto &hinstance = *h.hinstance;
+    const auto &data = h.hinstance->hinfo.data;
+    std::unordered_set<std::string> stack,nostack;
+
+    auto legend = new TLegend();
+    bool title_set = false;
+    auto stack = new THStack();
+    auto unstack = new THStack();
+    for (const auto &source : sources) {
+      if (!source->file->GetListOfKeys()->Contains(hinstance.name.c_str())) {
+        throw std::runtime_error(
+            fmt::format("Could not find histogram {}", hinfo.name));
+      }
+      auto hist = (TH1D *)source->file->Get(hinstance.name.c_str());
       hist->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
       hist->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
       hist->SetMarkerStyle(kPlus);
@@ -289,6 +327,9 @@ int main(int argc, char *argv[]) {
   std::vector<TFile *> files;
   for (DataSource &file : data_sources) {
     file.file = TFile::Open(file.path.c_str());
+    for (const auto &key : *file.file->GetListOfKeys()) {
+      file.keys.insert(key->GetName());
+    }
   }
 
   for (auto &hinfo : histograms) {
@@ -303,12 +344,31 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  for (auto &hinfo : histograms) {
+    if (glob::isGlob(hinfo.name)) {
+      for (int i = 0; i < hinfo.sets.size(); ++i) {
+        for (const auto &key : hinfo.sets[i]->sources[0]->keys) {
+          if (glob::match(key, hinfo.name)) {
+            hinfo.instances.push_back(std::unique_ptr<HistogramInfo::Instance>(
+                new HistogramInfo::Instance{ hinfo, key, i }));
+          }
+        }
+      }
+    } else {
+      for (int i = 0; i < hinfo.sets.size(); ++i) {
+        hinfo.instances.push_back(std::unique_ptr<HistogramInfo::Instance>(
+            new HistogramInfo::Instance{ hinfo, hinfo.name, i }));
+      }
+    }
+  }
+
   std::unique_ptr<SimpleOverlayPlotter> opl(new SimpleOverlayPlotter());
   auto histos = runProcess(opl.get(), histograms, data_sources, {});
+  fmt::print("{}", data_sources[0].keys);
 
   for (auto &h : histos) {
-    h.canvas->SaveAs(
-        (out_dir + "/" + h.hinfo->name + "_" + h.set->name + ".pdf").c_str());
+    h.canvas->SaveAs((out_dir + "/" + h.hinstance->name + "_" + h.set->name +
+                      ".pdf").c_str());
   }
 
   return 0;
