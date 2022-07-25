@@ -21,6 +21,7 @@
 #include <regex>
 #include <iterator>
 #include <THStack.h>
+#include <TGraphAsymmErrors.h>
 
 namespace glob {
 namespace details {
@@ -182,11 +183,9 @@ struct ProcessMaker {
   template <typename T> void addProcessor(const std::string &name) {
     processors[name] = std::unique_ptr<T>(new T());
   }
-  Processor *getProcessor(const std::string &s) { return processors[s]; }
-  const Processor *operator[](const std::string &s) const {
-    return processors[s];
-  }
-}
+  Processor *getProcessor(const std::string &s) { return processors[s].get(); }
+  Processor *operator[](const std::string &s) { return processors[s].get(); }
+};
 
 // Histogram makeRatioPlot(TH1* h1, TH1* h2) {
 //   auto canvas = new TCanvas();
@@ -205,6 +204,25 @@ struct ProcessMaker {
 //   legend->SetHeader("Legend", "C");
 //   return canvas;
 // }
+
+void setupLegend(TLegend *legend) {
+  legend->SetX1(0.7);
+  legend->SetY1(0.7);
+  legend->SetX2(0.85);
+  legend->SetY2(0.85);
+  legend->SetHeader("Samples", "C");
+  legend->Draw();
+}
+
+void maybeLog(TCanvas *c, bool x, bool y) {
+  if (x) {
+    c->SetLogx();
+  }
+  if (y) {
+    c->SetLogy();
+  }
+}
+
 struct SimpleOverlayPlotter : public Processor {
 
   void createVisual(Histogram &h, const DataOptions &opts) override {
@@ -231,68 +249,152 @@ struct SimpleOverlayPlotter : public Processor {
       stack->Add(hist);
       legend->AddEntry(hist, source->name.c_str());
     }
-    if (hinfo.log_x) {
-      h.canvas->SetLogx();
-    }
-    if (hinfo.log_y) {
-      h.canvas->SetLogy();
-    }
+    maybeLog(h.canvas, hinfo.log_x, hinfo.log_y);
     stack->Draw("nostack PLC PMC HIST p");
     stack->SetTitle(hinfo.title.c_str());
     stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
     stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
-
-    legend->SetX1(0.7);
-    legend->SetY1(0.7);
-    legend->SetX2(0.85);
-    legend->SetY2(0.85);
-    legend->SetHeader("Samples", "C");
-    legend->Draw();
+    setupLegend(legend);
   }
 };
 
 struct StackPlotter : public Processor {
   void createVisual(Histogram &h, const DataOptions &opts) override {
     gStyle->SetPalette(kBird);
-    // gStyle->SetOptStat(0);
+    gStyle->SetOptStat(0);
+    int i = 1;
     auto &sources = h.set->sources;
     const auto &hinfo = h.hinstance->info;
     const auto &hinstance = *h.hinstance;
-    const auto &data = h.hinstance->hinfo.data;
-    std::unordered_set<std::string> stack, nostack;
-
     auto legend = new TLegend();
+    std::string stack_tag;
+    get_toor(hinfo.data, "stack_tag", stack_tag, "bkg");
     bool title_set = false;
     auto stack = new THStack();
-    auto unstack = new THStack();
+    auto other = new THStack();
+    fmt::print("HERE\n");
     for (const auto &source : sources) {
+      if (!source->tags.count(stack_tag))
+        continue;
       if (!source->file->GetListOfKeys()->Contains(hinstance.name.c_str())) {
-        throw std::runtime_error(
-            fmt::format("Could not find histogram {}", hinfo.name));
+        throw std::runtime_error(fmt::format(
+            "Could not find histogram {} in data source {} with path {}",
+            hinfo.name, source->name, source->path));
       }
       auto hist = (TH1D *)source->file->Get(hinstance.name.c_str());
       hist->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
       hist->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
-      hist->SetMarkerStyle(kPlus);
-      // hist->Draw("Same PLC PMC");
+      hist->SetFillColor(gStyle->GetColorPalette(i));
+      hist->SetLineColor(gStyle->GetColorPalette(i));
+      hist->SetMarkerColor(gStyle->GetColorPalette(i));
       stack->Add(hist);
+      ++i;
       legend->AddEntry(hist, source->name.c_str());
     }
-    stack->Draw("nostack PLC PMC HIST p");
+    stack->Draw("HIST");
+    maybeLog(h.canvas, hinfo.log_x, hinfo.log_y);
     stack->SetTitle(hinfo.title.c_str());
     stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
     stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
+    stack->SetMinimum(0.01);
+    stack->Draw("HIST PFC PMC PLC");
+    gStyle->SetMarkerStyle(kPlus);
 
-    legend->SetX1(0.7);
-    legend->SetY1(0.7);
-    legend->SetX2(0.85);
-    legend->SetY2(0.85);
-    legend->SetHeader("Samples", "C");
-    legend->Draw();
+    for (const auto &source : sources) {
+      if (source->tags.count(stack_tag))
+        continue;
+      if (!source->file->GetListOfKeys()->Contains(hinstance.name.c_str())) {
+        throw std::runtime_error(fmt::format(
+            "Could not find histogram {} in data source {} with path {}",
+            hinfo.name, source->name, source->path));
+      }
+      auto hist = (TH1D *)source->file->Get(hinstance.name.c_str());
+
+      hist->SetLineColor(gStyle->GetColorPalette(i * 100));
+      hist->SetMarkerColor(gStyle->GetColorPalette(i * 100));
+      hist->Draw("SAME e1p");
+      legend->AddEntry(hist, source->name.c_str());
+      ++i;
+    }
+    setupLegend(legend);
   }
 };
 
-std::vector<Histogram> runProcess(const ProcessMaker &pm,
+struct RatioStackPlotter : public Processor {
+  void createVisual(Histogram &h, const DataOptions &opts) override {
+    gStyle->SetPalette(kBird);
+    gStyle->SetOptStat(0);
+    int i = 1;
+    auto &sources = h.set->sources;
+    const auto &hinfo = h.hinstance->info;
+    const auto &hinstance = *h.hinstance;
+    auto legend = new TLegend();
+    std::string stack_tag;
+    get_toor(hinfo.data, "stack_tag", stack_tag, "bkg");
+    bool title_set = false;
+    auto stack = new THStack();
+    h.canvas->Divide(1, 2);
+    h.canvas->cd(1);
+    for (const auto &source : sources) {
+      if (!source->tags.count(stack_tag))
+        continue;
+      if (!source->file->GetListOfKeys()->Contains(hinstance.name.c_str())) {
+        throw std::runtime_error(fmt::format(
+            "Could not find histogram {} in data source {} with path {}",
+            hinfo.name, source->name, source->path));
+      }
+      auto hist = (TH1D *)source->file->Get(hinstance.name.c_str());
+      hist->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
+      hist->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
+      hist->SetFillColor(gStyle->GetColorPalette(i));
+      hist->SetLineColor(gStyle->GetColorPalette(i));
+      hist->SetMarkerColor(gStyle->GetColorPalette(i));
+      stack->Add(hist);
+      ++i;
+      legend->AddEntry(hist, source->name.c_str());
+    }
+    //    stack->Draw("HIST");
+    //    maybeLog(h.canvas, hinfo.log_x, hinfo.log_y);
+    //    stack->SetTitle(hinfo.title.c_str());
+    //    stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
+    //    stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
+    //    stack->SetMinimum(0.01);
+    //    stack->Draw("HIST PFC PMC PLC");
+    //    gStyle->SetMarkerStyle(kPlus);
+
+    TList *stackHists = stack->GetHists();
+    TH1 *tmpHist = (TH1 *)stackHists->At(0)->Clone();
+    tmpHist->Reset();
+    for (int i = 0; i < stackHists->GetSize(); ++i) {
+      tmpHist->Add((TH1 *)stackHists->At(i));
+    }
+
+    for (const auto &source : sources) {
+      if (source->tags.count(stack_tag))
+        continue;
+      if (!source->file->GetListOfKeys()->Contains(hinstance.name.c_str())) {
+        throw std::runtime_error(fmt::format(
+            "Could not find histogram {} in data source {} with path {}",
+            hinfo.name, source->name, source->path));
+      }
+      auto hist = (TH1D *)source->file->Get(hinstance.name.c_str());
+
+      hist->SetLineColor(gStyle->GetColorPalette(i * 100));
+      hist->SetMarkerColor(gStyle->GetColorPalette(i * 100));
+      h.canvas->cd(1);
+      hist->Draw("SAME e1p");
+      h.canvas->cd(2);
+      auto tgae = new TGraphAsymmErrors(tmpHist, hist);
+      tgae->Draw("");
+      legend->AddEntry(hist, source->name.c_str());
+      ++i;
+    }
+    h.canvas->cd(1);
+    setupLegend(legend);
+  }
+};
+
+std::vector<Histogram> runProcess(ProcessMaker &pm,
                                   const std::vector<HistogramInfo> &hinfos,
                                   const std::vector<DataSource> &sources,
                                   const DataOptions &opts) {
@@ -395,8 +497,9 @@ int main(int argc, char *argv[]) {
   }
 
   ProcessMaker pm;
-  pm.add<StackPlotter>("stack");
-  pm.add<SimpleOverlayPlotter>("default");
+  pm.addProcessor<StackPlotter>("stack");
+  pm.addProcessor<SimpleOverlayPlotter>("default");
+  pm.addProcessor<RatioStackPlotter>("ratiostack");
   auto histos = runProcess(pm, histograms, data_sources, {});
 
   fmt::print("{}", data_sources[0].keys);
