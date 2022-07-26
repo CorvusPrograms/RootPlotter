@@ -22,6 +22,7 @@
 #include <iterator>
 #include <THStack.h>
 #include <TGraphAsymmErrors.h>
+#include <TGaxis.h>
 
 namespace glob {
 namespace details {
@@ -214,7 +215,7 @@ void setupLegend(TLegend *legend) {
   legend->Draw();
 }
 
-void maybeLog(TCanvas *c, bool x, bool y) {
+void maybeLog(TVirtualPad *c, bool x, bool y) {
   if (x) {
     c->SetLogx();
   }
@@ -251,7 +252,7 @@ struct SimpleOverlayPlotter : public Processor {
     }
     maybeLog(h.canvas, hinfo.log_x, hinfo.log_y);
     stack->Draw("nostack PLC PMC HIST p");
-    stack->SetTitle(hinfo.title.c_str());
+    stack->SetTitle(hinstance.name.c_str());
     stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
     stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
     setupLegend(legend);
@@ -293,7 +294,7 @@ struct StackPlotter : public Processor {
     }
     stack->Draw("HIST");
     maybeLog(h.canvas, hinfo.log_x, hinfo.log_y);
-    stack->SetTitle(hinfo.title.c_str());
+    stack->SetTitle(hinstance.name.c_str());
     stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
     stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
     stack->SetMinimum(0.01);
@@ -309,7 +310,6 @@ struct StackPlotter : public Processor {
             hinfo.name, source->name, source->path));
       }
       auto hist = (TH1D *)source->file->Get(hinstance.name.c_str());
-
       hist->SetLineColor(gStyle->GetColorPalette(i * 100));
       hist->SetMarkerColor(gStyle->GetColorPalette(i * 100));
       hist->Draw("SAME e1p");
@@ -319,6 +319,26 @@ struct StackPlotter : public Processor {
     setupLegend(legend);
   }
 };
+
+void setAxisProperties(TAxis *yaxis, TAxis *xaxis) {
+  xaxis->SetLabelSize(12);
+  yaxis->SetLabelSize(12);
+
+  yaxis->SetTitleSize(16);
+  xaxis->SetTitleSize(16);
+
+  xaxis->SetLabelFont(43);
+  yaxis->SetLabelFont(43);
+
+  xaxis->SetTitleFont(43);
+  yaxis->SetTitleFont(43);
+
+  //  xaxis->SetLabelOffset(0.03);
+  //  yaxis->SetLabelOffset(-0.03);
+
+    xaxis->SetTitleOffset(1.2);
+    yaxis->SetTitleOffset(3);
+}
 
 struct RatioStackPlotter : public Processor {
   void createVisual(Histogram &h, const DataOptions &opts) override {
@@ -334,7 +354,9 @@ struct RatioStackPlotter : public Processor {
     bool title_set = false;
     auto stack = new THStack();
     h.canvas->Divide(1, 2);
-    h.canvas->cd(1);
+    auto pad1 = h.canvas->cd(1);
+    pad1->SetPad(0, 0.3, 1, 1);
+    pad1->SetBottomMargin(0);
     for (const auto &source : sources) {
       if (!source->tags.count(stack_tag))
         continue;
@@ -353,22 +375,31 @@ struct RatioStackPlotter : public Processor {
       ++i;
       legend->AddEntry(hist, source->name.c_str());
     }
-    //    stack->Draw("HIST");
-    //    maybeLog(h.canvas, hinfo.log_x, hinfo.log_y);
-    //    stack->SetTitle(hinfo.title.c_str());
-    //    stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
-    //    stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
-    //    stack->SetMinimum(0.01);
-    //    stack->Draw("HIST PFC PMC PLC");
-    //    gStyle->SetMarkerStyle(kPlus);
-
+    maybeLog(pad1, hinfo.log_x, hinfo.log_y);
+    stack->Draw();
+    auto stackyaxis = stack->GetYaxis();
+    auto stackxaxis = stack->GetXaxis();
+    setAxisProperties(stackxaxis, stackyaxis);
+    auto newaxis = new TAxis(*stackyaxis);
+    stack->Draw("HIST PFC PLC PMC");
+    // stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
+    stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
+    stack->SetTitle(hinstance.name.c_str());
+    stack->SetMinimum(0.01);
+    auto stackx = stack->GetXaxis();
+    auto first = stackx->GetBinLowEdge(stackx->GetFirst());
+    auto last = stackx->GetBinUpEdge(stackx->GetLast());
     TList *stackHists = stack->GetHists();
     TH1 *tmpHist = (TH1 *)stackHists->At(0)->Clone();
     tmpHist->Reset();
     for (int i = 0; i < stackHists->GetSize(); ++i) {
       tmpHist->Add((TH1 *)stackHists->At(i));
     }
-
+    auto pad2 = h.canvas->cd(2);
+    pad2->SetPad(0, 0, 1, 0.3);
+    pad2->SetTopMargin(0);
+    pad2->SetBottomMargin(0.2);
+    bool onpad2 = false;
     for (const auto &source : sources) {
       if (source->tags.count(stack_tag))
         continue;
@@ -384,13 +415,32 @@ struct RatioStackPlotter : public Processor {
       h.canvas->cd(1);
       hist->Draw("SAME e1p");
       h.canvas->cd(2);
-      auto tgae = new TGraphAsymmErrors(tmpHist, hist);
-      tgae->Draw("");
+      auto tgae = new TGraphAsymmErrors(hist, tmpHist);
+      if (onpad2) {
+        tgae->Draw("SAME");
+      } else {
+        tgae->Draw();
+        tgae->SetTitle("");
+        onpad2 = true;
+      }
+      auto tgaey = tgae->GetYaxis();
+      auto tgaex = tgae->GetXaxis();
+      fmt::print("HERERAJKDSKLJASKLDJ: {} , {}\n",
+                 tgaey->GetXmin(),
+                 tgaey->GetXmax()
+                 );
+      tgaex->SetRange(first,last);
+      tgaex->SetRangeUser(first,last);
+      tgaex->SetTitle(hinstance.name.c_str());
+      tgaey->SetTitle("Ratio");
+      tgaey->SetNoExponent(true);
+      setAxisProperties(tgaex, tgaey);
       legend->AddEntry(hist, source->name.c_str());
       ++i;
     }
     h.canvas->cd(1);
     setupLegend(legend);
+    newaxis->Draw();
   }
 };
 
