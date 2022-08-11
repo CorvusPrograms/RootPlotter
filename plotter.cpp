@@ -209,8 +209,8 @@ struct ProcessMaker {
 void setupLegend(TLegend *legend) {
   legend->SetX1(0.7);
   legend->SetY1(0.7);
-  legend->SetX2(0.85);
-  legend->SetY2(0.85);
+  legend->SetX2(0.90);
+  legend->SetY2(0.90);
   legend->SetHeader("Samples", "C");
   legend->Draw();
 }
