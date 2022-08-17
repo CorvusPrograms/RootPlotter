@@ -6,6 +6,7 @@
 #include <TCanvas.h>
 #include <TGaxis.h>
 #include <TStyle.h>
+#include <cassert>
 #include <TLegend.h>
 #include <algorithm>
 #include <TPaveText.h>
@@ -23,6 +24,7 @@
 #include <THStack.h>
 #include <TGraphAsymmErrors.h>
 #include <TGaxis.h>
+
 
 namespace glob {
 namespace details {
@@ -228,7 +230,7 @@ struct SimpleOverlayPlotter : public Processor {
 
   void createVisual(Histogram &h, const DataOptions &opts) override {
 
-    gStyle->SetPalette(kBird);
+    gStyle->SetPalette(kRainBow);
     // gStyle->SetOptStat(0);
     auto &sources = h.set->sources;
     const auto &hinfo = h.hinstance->info;
@@ -251,7 +253,7 @@ struct SimpleOverlayPlotter : public Processor {
       legend->AddEntry(hist, source->name.c_str());
     }
     maybeLog(h.canvas, hinfo.log_x, hinfo.log_y);
-    stack->Draw("nostack PLC PMC HIST p");
+    stack->Draw("nostack PLC PMC p");
     stack->SetTitle(hinstance.name.c_str());
     stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
     stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
@@ -261,7 +263,7 @@ struct SimpleOverlayPlotter : public Processor {
 
 struct StackPlotter : public Processor {
   void createVisual(Histogram &h, const DataOptions &opts) override {
-    gStyle->SetPalette(kBird);
+    gStyle->SetPalette(kRainBow);
     gStyle->SetOptStat(0);
     int i = 1;
     auto &sources = h.set->sources;
@@ -273,7 +275,6 @@ struct StackPlotter : public Processor {
     bool title_set = false;
     auto stack = new THStack();
     auto other = new THStack();
-    fmt::print("HERE\n");
     for (const auto &source : sources) {
       if (!source->tags.count(stack_tag))
         continue;
@@ -321,6 +322,7 @@ struct StackPlotter : public Processor {
 };
 
 void setAxisProperties(TAxis *yaxis, TAxis *xaxis) {
+  assert(yaxis && xaxis);
   xaxis->SetLabelSize(12);
   yaxis->SetLabelSize(12);
 
@@ -336,16 +338,16 @@ void setAxisProperties(TAxis *yaxis, TAxis *xaxis) {
   //  xaxis->SetLabelOffset(0.03);
   //  yaxis->SetLabelOffset(-0.03);
 
-    xaxis->SetTitleOffset(1.2);
-    yaxis->SetTitleOffset(3);
+  xaxis->SetTitleOffset(1.2);
+  yaxis->SetTitleOffset(3);
 }
 
 struct RatioStackPlotter : public Processor {
   void createVisual(Histogram &h, const DataOptions &opts) override {
-    gStyle->SetPalette(kBird);
+    gStyle->SetPalette(kRainBow);
     gStyle->SetOptStat(0);
     int i = 1;
-    auto &sources = h.set->sources;
+    const auto &sources = h.set->sources;
     const auto &hinfo = h.hinstance->info;
     const auto &hinstance = *h.hinstance;
     auto legend = new TLegend();
@@ -366,6 +368,10 @@ struct RatioStackPlotter : public Processor {
             hinfo.name, source->name, source->path));
       }
       auto hist = (TH1D *)source->file->Get(hinstance.name.c_str());
+      fmt::print(
+          "Using histogram {} in data source {} with path {} with entries {}\n",
+          hinstance.name.c_str(), source->name, source->path,
+          hist->GetEntries());
       hist->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
       hist->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
       hist->SetFillColor(gStyle->GetColorPalette(i));
@@ -375,6 +381,7 @@ struct RatioStackPlotter : public Processor {
       ++i;
       legend->AddEntry(hist, source->name.c_str());
     }
+    assert(i > 1);
     maybeLog(pad1, hinfo.log_x, hinfo.log_y);
     stack->Draw();
     auto stackyaxis = stack->GetYaxis();
@@ -425,12 +432,8 @@ struct RatioStackPlotter : public Processor {
       }
       auto tgaey = tgae->GetYaxis();
       auto tgaex = tgae->GetXaxis();
-      fmt::print("HERERAJKDSKLJASKLDJ: {} , {}\n",
-                 tgaey->GetXmin(),
-                 tgaey->GetXmax()
-                 );
-      tgaex->SetRange(first,last);
-      tgaex->SetRangeUser(first,last);
+      tgaex->SetRange(first, last);
+      tgaex->SetRangeUser(first, last);
       tgaex->SetTitle(hinstance.name.c_str());
       tgaey->SetTitle("Ratio");
       tgaey->SetNoExponent(true);
@@ -454,6 +457,7 @@ std::vector<Histogram> runProcess(ProcessMaker &pm,
       ret.push_back(Histogram{ new TCanvas(), instance.get(),
                                hinfo.sets[instance->idx_set] });
       ret.back();
+      fmt::print("Processing histogram {}\n", instance->name);
       pm[hinfo.mode]->createVisual(ret.back(), opts);
     }
   }

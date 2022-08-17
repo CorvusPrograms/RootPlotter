@@ -42,14 +42,19 @@ GIT_REPOSITORY https://github.com/nlohmann/json/
 GIT_TAG 4f8fba14066156b73f1189a2b8bd568bde5284c5
 )
 
+#FetchContent_Declare(
+#sol2
+#GIT_REPOSITORY https://github.com/ThePhD/sol2/
+#GIT_TAG eba86625b707e3c8c99bbfc4624e51f42dc9e561
+#)
+
 FetchContent_MakeAvailable(fmt json)
 
 find_package(ROOT REQUIRED COMPONENTS RIO Core Hist Tree Thread)
 
 add_executable(plotter plotter.cpp)
 
-target_link_libraries(plotter PUBLIC fmt::fmt ROOT::Core ROOT::Hist ROOT::RIO nlohmann_json::nlohmann_json ROOT::Graf ROOT::Gpad
-)
+target_link_libraries(plotter PUBLIC fmt::fmt ROOT::Core ROOT::Hist ROOT::RIO nlohmann_json::nlohmann_json ROOT::Graf ROOT::Gpad)
 
 
 unset(CMAKE_BUILD_TYPE CACHE)
