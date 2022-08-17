@@ -25,7 +25,6 @@
 #include <TGraphAsymmErrors.h>
 #include <TGaxis.h>
 
-
 namespace glob {
 namespace details {
 template <typename Compare, typename Iterator,
@@ -130,6 +129,7 @@ struct HistogramInfo {
   std::string title, xlabel, ylabel;
   std::string form;
   std::string mode;
+  bool normalize = false;
   bool log_x = false, log_y = false;
 
   nlohmann::json data;
@@ -169,6 +169,7 @@ void from_json(const nlohmann::json &j, HistogramInfo &p) {
   get_toor(j, "log_x", p.log_x, false);
   get_toor(j, "log_y", p.log_y, false);
   get_toor(j, "mode", p.mode, "default");
+  get_toor(j, "normalize", p.normalize, true);
   get_toor(j, "set_names", p.set_names, {});
   p.data = j;
 }
@@ -238,6 +239,9 @@ struct SimpleOverlayPlotter : public Processor {
     auto legend = new TLegend();
     bool title_set = false;
     auto stack = new THStack();
+    bool first = true;
+    float integral;
+
     for (const auto &source : sources) {
       if (!source->file->GetListOfKeys()->Contains(hinstance.name.c_str())) {
         throw std::runtime_error(fmt::format(
@@ -248,15 +252,24 @@ struct SimpleOverlayPlotter : public Processor {
       hist->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
       hist->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
       hist->SetMarkerStyle(kPlus);
+      if (first) {
+        integral = hist->Integral();
+        first = false;
+      } else if (hinfo.normalize) {
+        hist->Scale(integral / hist->Integral());
+      }
       // hist->Draw("Same PLC PMC");
       stack->Add(hist);
       legend->AddEntry(hist, source->name.c_str());
     }
+
     maybeLog(h.canvas, hinfo.log_x, hinfo.log_y);
     stack->Draw("nostack PLC PMC p");
     stack->SetTitle(hinstance.name.c_str());
     stack->GetXaxis()->SetTitle(hinfo.xlabel.c_str());
-    stack->GetYaxis()->SetTitle(hinfo.ylabel.c_str());
+    stack->GetYaxis()->SetTitle(
+        (((hinfo.normalize) ? std::string("Normalized ") : std::string()) +
+         hinfo.ylabel).c_str());
     setupLegend(legend);
   }
 };
