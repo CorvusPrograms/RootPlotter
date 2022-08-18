@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 project(RootPlotter)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE DEBUG)
@@ -42,13 +42,16 @@ GIT_REPOSITORY https://github.com/nlohmann/json/
 GIT_TAG 4f8fba14066156b73f1189a2b8bd568bde5284c5
 )
 
-#FetchContent_Declare(
-#sol2
-#GIT_REPOSITORY https://github.com/ThePhD/sol2/
-#GIT_TAG eba86625b707e3c8c99bbfc4624e51f42dc9e561
-#)
+FetchContent_Declare(
+sol2
+GIT_REPOSITORY https://github.com/ThePhD/sol2/
+GIT_TAG eba86625b707e3c8c99bbfc4624e51f42dc9e561
+)
 
-FetchContent_MakeAvailable(fmt json)
+
+set(SOL2_ENABLE_INSTALL OFF)
+FetchContent_MakeAvailable(fmt json sol2)
+
 
 find_package(ROOT REQUIRED COMPONENTS RIO Core Hist Tree Thread)
 
@@ -60,3 +63,47 @@ target_link_libraries(plotter PUBLIC fmt::fmt ROOT::Core ROOT::Hist ROOT::RIO nl
 unset(CMAKE_BUILD_TYPE CACHE)
 
 install(TARGETS plotter DESTINATION "~/.local/bin")
+
+FetchContent_Declare(
+  lua
+  URL http://www.lua.org/ftp/lua-5.4.4.tar.gz 
+  )
+
+FetchContent_GetProperties(lua)
+if(NOT lua_POPULATED)
+  FetchContent_Populate(lua)
+endif()
+
+set(srcDir ${lua_SOURCE_DIR}/src)
+set(srcFiles lapi.c lauxlib.c lbaselib.c lcode.c lcorolib.c lctype.c ldblib.c ldebug.c ldo.c
+    ldump.c lfunc.c lgc.c linit.c liolib.c llex.c lmathlib.c lmem.c loadlib.c lobject.c lopcodes.c
+    loslib.c lparser.c lstate.c lstring.c lstrlib.c ltable.c ltablib.c  ltm.c lundump.c
+    lutf8lib.c lvm.c lzio.c)
+set(publicHeaderFiles lauxlib.h lua.h luaconf.h lualib.h)
+
+list(TRANSFORM srcFiles PREPEND ${srcDir}/)
+list(TRANSFORM publicHeaderFiles PREPEND ${srcDir}/)
+
+add_library(lua ${srcFiles})
+
+target_compile_definitions(lua PRIVATE $<$<PLATFORM_ID:Linux>:LUA_USE_LINUX LUA_COMPAT_5_2>)
+
+target_compile_options(lua
+    PRIVATE
+    $<$<OR:$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:Clang>,$<C_COMPILER_ID:GNU>>:
+    -Wextra -Wshadow -Wsign-compare -Wundef -Wwrite-strings -Wredundant-decls
+    -Wdisabled-optimization -Waggregate-return -Wdouble-promotion -Wdeclaration-after-statement
+    -Wmissing-prototypes -Wnested-externs -Wstrict-prototypes -Wc++-compat -Wold-style-definition>)
+set(includeDir ${lua_BINARY_DIR}/include)
+file(COPY ${publicHeaderFiles} DESTINATION ${includeDir})
+
+target_link_libraries(lua PUBLIC ${CMAKE_DL_LIBS})
+
+#add_library(lua-header INTERFACE)
+target_include_directories(lua SYSTEM INTERFACE ${includeDir})
+#target_link_libraries(lua INTERFACE lua-header)
+#add_library(lua::lib ALIAS lua)
+#add_library(lua::header ALIAS lua-header)
+#set(SOL2_BUILD_LUA TRUE)
+get_target_property(_inc sol2 INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(sol2 SYSTEM INTERFACE ${_inc})
