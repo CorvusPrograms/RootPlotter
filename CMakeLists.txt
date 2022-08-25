@@ -7,6 +7,9 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE DEBUG)
 endif()
 
+set(CMAKE_MODULE_PATH  "/export/scratch/local/share/root/cmake/" ${CMAKE_MODULE_PATH} "/export/scratch/local/share/root/cmake/" )
+
+
 if (MSVC)
   add_compile_options(/W4 /WX)
   add_compile_options( $<$<CONFIG:RELEASE>:/O3> $<$<CONFIG:DEBUG>:/O0> $<$<CONFIG:DEBUG>:/g>)
@@ -30,7 +33,9 @@ GIT_REPOSITORY https://github.com/ThePhD/sol2/
 GIT_TAG eba86625b707e3c8c99bbfc4624e51f42dc9e561)
 set(SOL2_ENABLE_INSTALL OFF)
 FetchContent_MakeAvailable(fmt json sol2)
-find_package(ROOT REQUIRED COMPONENTS RIO Core Hist Tree Thread)
+
+include(/export/scratch/local/share/root/cmake/ROOTConfig.cmake)
+#find_package(ROOT 2.26 REQUIRED COMPONENTS RIO Core Hist Tree Thread PATHS "/export/scratch/local/share/root/cmake/")
 unset(CMAKE_BUILD_TYPE CACHE)
 
 FetchContent_Declare( lua URL http://www.lua.org/ftp/lua-5.4.4.tar.gz )

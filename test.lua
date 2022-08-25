@@ -1,7 +1,9 @@
-print("Hello World")
-ds1 = DataSource:new("p1")
-ds2 = DataSource:new("p2")
-ss = SourceSet:new({ds1, ds2});
+ds1 = source("p1")
+ds2 = source("p2")
+ss = set({ds1,ds2})
+
+print(source)
+print(ds1)
 print(ss)
 
 
