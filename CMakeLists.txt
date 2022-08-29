@@ -5,12 +5,6 @@ include(GNUInstallDirs)
 project(RootPlotter)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE DEBUG)
-endif()
-
-set(CMAKE_MODULE_PATH  "/export/scratch/local/share/root/cmake/" ${CMAKE_MODULE_PATH} "/export/scratch/local/share/root/cmake/" )
-
 
 if (MSVC)
   add_compile_options(/W4 /WX)
@@ -41,10 +35,11 @@ FetchContent_Declare(cli11
 FetchContent_MakeAvailable(fmt json sol2 cli11)
 
 find_package(ROOT 2.26 REQUIRED COMPONENTS RIO Core Hist Tree Thread)
+
 if(NOT ${ROOT_FOUND})
-include(/export/scratch/local/share/root/cmake/ROOTConfig.cmake)
+       message("Could not find system root, checking local install")
+       include(/export/scratch/local/share/root/cmake/ROOTConfig.cmake)
 endif()
-unset(CMAKE_BUILD_TYPE CACHE)
 
 FetchContent_Declare( lua URL http://www.lua.org/ftp/lua-5.4.4.tar.gz )
 

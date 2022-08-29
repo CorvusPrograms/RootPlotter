@@ -33,21 +33,40 @@ end
 
 base = "/export/scratch/Research/rpvsusy/data/08_15_2022_FixedBackground/"
 rpv4 = DataSource:new(base .. "2018_RPV2W_mS-450_mB-0.root")
+rpv4.name="RPV4"
 rpv6 = DataSource:new(base .. "2018_RPV2W_mS-650_mB-0.root")
+rpv6.name="RPV6"
 rpv8 = DataSource:new(base .. "2018_RPV2W_mS-850_mB-0.root")
+rpv8.name="RPV8"
 
 sig = SourceSet:new({rpv4,rpv6,rpv8});
 bgk = SourceSet:new({qcd,tt});
 
-function plot(args)
-   print(plt)
-   args[1](args)
+function MD(...)
+   return InputData:new(...)
 end
-print(simple)
 
-plot{simple, "WPt_(lepnum:%d)Lep",
-      data={bgk, sig, sig},
-      title="Pt(W), $lepnum Leptons",
-      xlabel="W(Pt)", ylabel="Events"
-}
+function plot(args)
+   local pattern = args[2]
+   local data = args[3]
+   x = expand_data(data, data[2].source:get_keys(), pattern)
+   for k,v in ipairs(x) do
+      print(v.captures.ALL)
+      y = finalize_input_data(v.inputs)
+      pad = simple(make_plot(), y)
+      save = v.captures.ALL .. ".pdf"
+      print(save)
+     save_pad(pad, save)
+   end
+end
+
+wannaplot = {"WPt", "CA12Pt", "HT_pt20", "met", "nbjets_loose"}
+
+print("Starting loop")
+for i,v in ipairs(wannaplot) do
+   plot{simple, v .. "_*Lep",
+        {MD(bgk), MD(sig) },
+   }
+end
+
 
