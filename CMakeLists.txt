@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
+include(FetchContent)
+include(GNUInstallDirs)
 
 project(RootPlotter)
 set(CMAKE_CXX_STANDARD 17)
@@ -19,7 +21,6 @@ else()
   add_compile_options( $<$<CONFIG:RELEASE>:-O3> $<$<CONFIG:DEBUG>:-O0> $<$<CONFIG:DEBUG>:-g>) 
   endif()
 
-include(FetchContent)
 FetchContent_Declare( fmt
 GIT_REPOSITORY https://github.com/fmtlib/fmt
 GIT_TAG b6f4ceaed0a0a24ccf575fab6c56dd50ccf6f1a9)
@@ -32,10 +33,17 @@ FetchContent_Declare(sol2
 GIT_REPOSITORY https://github.com/ThePhD/sol2/
 GIT_TAG eba86625b707e3c8c99bbfc4624e51f42dc9e561)
 set(SOL2_ENABLE_INSTALL OFF)
-FetchContent_MakeAvailable(fmt json sol2)
 
+FetchContent_Declare(cli11
+  GIT_REPOSITORY https://github.com/CLIUtils/CLI11
+  GIT_TAG        v2.2.0)
+
+FetchContent_MakeAvailable(fmt json sol2 cli11)
+
+find_package(ROOT 2.26 REQUIRED COMPONENTS RIO Core Hist Tree Thread)
+if(NOT ${ROOT_FOUND})
 include(/export/scratch/local/share/root/cmake/ROOTConfig.cmake)
-#find_package(ROOT 2.26 REQUIRED COMPONENTS RIO Core Hist Tree Thread PATHS "/export/scratch/local/share/root/cmake/")
+endif()
 unset(CMAKE_BUILD_TYPE CACHE)
 
 FetchContent_Declare( lua URL http://www.lua.org/ftp/lua-5.4.4.tar.gz )
@@ -44,6 +52,7 @@ FetchContent_GetProperties(lua)
 if(NOT lua_POPULATED)
   FetchContent_Populate(lua)
 endif()
+
 
 set(srcDir ${lua_SOURCE_DIR}/src)
 set(srcFiles lapi.c lauxlib.c lbaselib.c lcode.c lcorolib.c lctype.c ldblib.c ldebug.c ldo.c
@@ -72,5 +81,5 @@ target_link_libraries(lua PUBLIC ${CMAKE_DL_LIBS})
 target_include_directories(lua SYSTEM INTERFACE ${includeDir})
 
 add_executable(plotter plotter.cpp)
-target_link_libraries(plotter PUBLIC fmt::fmt ROOT::Core ROOT::Hist ROOT::RIO nlohmann_json::nlohmann_json ROOT::Graf ROOT::Gpad sol2 lua)
-install(TARGETS plotter DESTINATION "~/.local/bin")
+target_link_libraries(plotter PUBLIC fmt::fmt ROOT::Core ROOT::Hist ROOT::RIO nlohmann_json::nlohmann_json ROOT::Graf ROOT::Gpad sol2 lua  CLI11::CLI11)
+install(TARGETS plotter DESTINATION ${GNU_INSTALL_BINDIR})
