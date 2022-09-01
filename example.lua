@@ -1,3 +1,16 @@
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
 function namegroup(match)
    match_idx={}
    idx = 1
@@ -29,44 +42,72 @@ end
 
 
 
-
+x=1
 
 base = "/export/scratch/Research/rpvsusy/data/08_15_2022_FixedBackground/"
-rpv4 = DataSource:new(base .. "2018_RPV2W_mS-450_mB-0.root")
-rpv4.name="RPV4"
-rpv6 = DataSource:new(base .. "2018_RPV2W_mS-650_mB-0.root")
-rpv6.name="RPV6"
-rpv8 = DataSource:new(base .. "2018_RPV2W_mS-850_mB-0.root")
-rpv8.name="RPV8"
+rpv8 = DataSource:new(base .. "2018_RPV2W_mS-850_mB-0.root"):set_name("RPV 850"):set_pal(200)
+rpv4 = DataSource:new(base .. "2018_RPV2W_mS-450_mB-0.root"):set_name("RPV 450"):set_pal(1)
+rpv6 = DataSource:new(base .. "2018_RPV2W_mS-650_mB-0.root"):set_name("RPV 650"):set_pal(100)
 
-sig = SourceSet:new({rpv4,rpv6,rpv8});
-bgk = SourceSet:new({qcd,tt});
+tt = DataSource:new(base .. "2018_TT.root"):set_name("TT"):set_pal(300)
+qcd = DataSource:new(base .. "2018_QCD.root"):set_name("QCD"):set_pal(400)
+
+sig = SourceSet:new({rpv4,rpv6,rpv8})
+bkg = SourceSet:new({qcd,tt})
 
 function MD(...)
    return InputData:new(...)
 end
 
-function plot(args)
-   local pattern = args[2]
-   local data = args[3]
-   x = expand_data(data, data[2].source:get_keys(), pattern)
+function simple_plot(args)
+   local pattern = args[1]
+   local data = args[2]
+   x = expand_data(data, data[1].source:get_keys(), pattern)
+   ret = {}
    for k,v in ipairs(x) do
-      print(v.captures.ALL)
-      y = finalize_input_data(v.inputs)
-      pad = simple(make_plot(), y)
-      save = v.captures.ALL .. ".pdf"
-      print(save)
-     save_pad(pad, save)
+      table.insert(ret, {v.captures, simple(make_plot(), finalize_input_data(v.inputs), create_options({x=1, y=3}))})
+   end
+   return ret
+end
+
+function ratio(args)
+   local pattern = args[1]
+   local data = args[2]
+   x = expand_data(data, data[1].source:get_keys(), pattern)
+   ret = {}
+   for k,v in ipairs(x) do
+      final=finalize_input_data(v.inputs)
+      table.insert(ret, {v.captures, ratio_plot(make_plot(), final[2], final[1])})
+   end
+   return ret
+end
+
+
+options = {}
+
+function plot(args)
+   local fun=args[1]
+   table.remove(args, 1)
+   print(dump(args))
+   ret = fun(args)
+   for k , v in ipairs(ret) do
+      captures = v[1]
+      name = captures.ALL
+      save_name = options.outdir ..  captures.ALL .. ".pdf"
+      save_pad(v[2], save_name)
    end
 end
 
-wannaplot = {"WPt", "CA12Pt", "HT_pt20", "met", "nbjets_loose"}
-
-print("Starting loop")
-for i,v in ipairs(wannaplot) do
-   plot{simple, v .. "_*Lep",
-        {MD(bgk), MD(sig) },
-   }
-end
+options.outdir = "out1/"
+-- plot{ratio, "met" .. "_*Lep",
+--      {MD(sig, false ,3,false) , MD(sig, false ,3,false)}
+options.outdir = "out2/"
+plot{simple_plot, "nbjets_medium" .. "_*Lep",
+     {
+        MD(sig, true , 1,false),
+        MD(bkg, true, 1, false)
+     }
+     , opts={}
+}
 
 

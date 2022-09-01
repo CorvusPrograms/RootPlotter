@@ -36,7 +36,14 @@ struct PlotElement {
   virtual TAxis *getXAxis() = 0;
   virtual TAxis *getYAxis() = 0;
   virtual void Draw(const std::string &s) = 0;
-  virtual std::string to_string() const = 0 ;
+  virtual std::string to_string() const = 0;
+  virtual float getMin() = 0;
+  virtual float getMax() = 0;
+  virtual void setFillAtt(TAttFill *) {};
+  virtual void setMarkAtt(TAttMarker *) {};
+  virtual void setLineAtt(TAttLine *) {};
+  virtual void setTitle(const std::string &s) = 0;
+
   //   virtual void setXLabel(const std::string &s) { xlabel = s; }
   //   virtual std::string setXLabel(const std::string &s) const { return
   // xlabel; }
@@ -51,16 +58,27 @@ struct DataSource {
   std::string name;
   std::unordered_set<std::string> tags;
   std::unordered_set<std::string> keys;
+  int pallette_idx = 1;
   TFile *file = nullptr;
   DataSource() = default;
   DataSource(const std::string &p, const std::string &n) : DataSource(p) {
     name = n;
   }
-
   DataSource(const std::string &p) : path{ p } {
     load();
     getKeys();
   }
+
+  DataSource &setName(const std::string &n) {
+    name = n;
+    fmt::print("Setting name to {}\n", name);
+    return *this;
+  }
+  DataSource &setPal(int p) {
+    pallette_idx = p;
+    return *this;
+  }
+
   std::string to_string() {
     return fmt::format("DataSource({},{})", path, tags);
   }
@@ -136,6 +154,8 @@ struct Histogram : public PlotElement {
   TH1 *hist;
   Histogram(DataSource *s, TH1 *h) : source{ s }, hist{ h } {}
   virtual void addToLegend(TLegend *legend) {
+    fmt::print("During legend creation source  is {} {}", fmt::ptr(source),
+               source->name);
     legend->AddEntry(hist, source->name.c_str());
   }
   virtual TH1 *getHistogram() { return hist; }
@@ -143,8 +163,39 @@ struct Histogram : public PlotElement {
   virtual float getIntegral() { return hist->Integral(); }
   virtual TAxis *getXAxis() { return hist->GetXaxis(); }
   virtual TAxis *getYAxis() { return hist->GetYaxis(); }
-  virtual void Draw(const std::string &s) { hist->Draw(s.c_str()); }
+  virtual void setTitle(const std::string &s) { hist->SetTitle(s.c_str()); }
+  virtual void Draw(const std::string &s) {
+    setMarkAtt(hist);
+    setFillAtt(hist);
+    setLineAtt(hist);
+    hist->Draw(s.c_str());
+  }
+  void setFillStyle() {}
+  void setMarkerStyle() {}
+  void setLineStyle() {}
+
+  virtual float getMin() {
+    auto xaxis = getXAxis();
+    return xaxis->GetBinLowEdge(xaxis->GetFirst());
+  }
+  virtual float getMax() {
+    auto xaxis = getXAxis();
+    return xaxis->GetBinUpEdge(xaxis->GetLast());
+  }
   virtual std::string to_string() const { return source->name; }
+
+  virtual void setFillAtt(TAttFill *fill_att) {
+    int pidx = source->pallette_idx;
+    fill_att->SetFillColor(gStyle->GetColorPalette(pidx));
+  }
+  virtual void setMarkAtt(TAttMarker *mark_att) {
+    int pidx = source->pallette_idx;
+    mark_att->SetMarkerColor(gStyle->GetColorPalette(pidx));
+  }
+  virtual void setLineAtt(TAttLine *line_att) {
+    int pidx = source->pallette_idx;
+    line_att->SetLineColor(gStyle->GetColorPalette(pidx));
+  }
   virtual ~Histogram() = default;
 };
 
@@ -160,6 +211,7 @@ struct Stack : public PlotElement {
       ++i;
     }
   }
+  virtual void setTitle(const std::string &s) { hist->SetTitle(s.c_str()); }
   virtual TH1 *getHistogram() { return hist->GetHistogram(); }
   virtual TH1 *getTotals() {
     TList *stackHists = hist->GetHists();
@@ -170,12 +222,40 @@ struct Stack : public PlotElement {
     }
     return tmpHist;
   }
+
   virtual float getIntegral() { return getTotals()->Integral(); }
   virtual TAxis *getXAxis() { return hist->GetXaxis(); }
   virtual TAxis *getYAxis() { return hist->GetYaxis(); }
-  virtual void Draw(const std::string &s) { hist->Draw(s.c_str()); }
+  virtual void Draw(const std::string &s) {
+    int i = 0;
+    for (const auto &th : *hist) {
+      auto h = static_cast<TH1 *>(th);
+      auto pidx = sources[i]->pallette_idx;
+      h->SetFillColor(gStyle->GetColorPalette(pidx));
+      h->SetMarkerColor(gStyle->GetColorPalette(pidx));
+      h->SetLineColor(gStyle->GetColorPalette(pidx));
+      ++i;
+    }
+    hist->Draw(s.c_str());
+  }
   virtual std::string to_string() const { return sources[0]->name; }
+  virtual float getMin() {
+    auto xaxis = getXAxis();
+    return xaxis->GetBinLowEdge(xaxis->GetFirst());
+  }
+  virtual float getMax() {
+    auto xaxis = getXAxis();
+    return xaxis->GetBinUpEdge(xaxis->GetLast());
+  }
   virtual ~Stack() = default;
+};
+
+struct PlotOptions {
+  using SOType = std::optional<std::string>;
+  SOType title, xlabel, ylabel;
+  bool show_stats = false;
+  bool logx = false, logy = false;
+  int palette = kRainBow;
 };
 
 void makeBindings(sol::state &lua);
@@ -186,7 +266,8 @@ void makeBindings(sol::state &lua) {
                                       DataSource(std::string, std::string)>(),
       "name", &DataSource::name, "path", &DataSource::path, "tags",
       &DataSource::tags, "keys", &DataSource::keys, "get_hist",
-      &DataSource::getHist);
+      &DataSource::getHist, "set_name", &DataSource::setName, "set_pal",
+      &DataSource::setPal);
   auto source_set_type = lua.new_usertype<SourceSet>(
       "SourceSet",
       sol::constructors<SourceSet(), SourceSet(std::vector<DataSource *>)>(),
@@ -200,6 +281,11 @@ void makeBindings(sol::state &lua) {
   auto matched_type =
       lua.new_usertype<MatchedKey>("MatchedKey", "inputs", &MatchedKey::inputs,
                                    "captures", &MatchedKey::captures);
+  auto plot_options_type = lua.new_usertype<PlotOptions>(
+      "PlotOptions", "xlabel", &PlotOptions::xlabel, "ylabel",
+      &PlotOptions::ylabel, "title", &PlotOptions::title, "show_stats",
+      &PlotOptions::show_stats, "logx", &PlotOptions::logx, "logy",
+      &PlotOptions::logy, "palette", &PlotOptions::palette);
 }
 
 static std::vector<std::unique_ptr<DataSource> > sources;
@@ -224,25 +310,28 @@ void setupLegend(TLegend *legend) {
 
 void setAxisProperties(TAxis *yaxis, TAxis *xaxis) {
   assert(yaxis && xaxis);
-  xaxis->SetLabelSize(12);
-  yaxis->SetLabelSize(12);
-  yaxis->SetTitleSize(16);
-  xaxis->SetTitleSize(16);
-  xaxis->SetLabelFont(43);
-  yaxis->SetLabelFont(43);
-  xaxis->SetTitleFont(43);
-  yaxis->SetTitleFont(43);
-  xaxis->SetTitleOffset(1.2);
-  yaxis->SetTitleOffset(3);
+  //   xaxis->SetLabelSize(12);
+  //   yaxis->SetLabelSize(12);
+  //   yaxis->SetTitleSize(16);
+  //   xaxis->SetTitleSize(16);
+  //   xaxis->SetLabelFont(43);
+  //   yaxis->SetLabelFont(43);
+  //   xaxis->SetTitleFont(43);
+  //   yaxis->SetTitleFont(43);
+  //   xaxis->SetTitleOffset(1.2);
+  //   yaxis->SetTitleOffset(3);
 }
 
 inline TH1 *getHistogram(TH1 *h) { return h; }
 inline TH1 *getHistogram(THStack *h) { return h->GetHistogram(); }
 
-Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement> > &data) {
+Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement> > &data,
+                const PlotOptions &opts) {
   pad->cd();
-  gStyle->SetPalette(kRainBow);
-  gStyle->SetOptStat(0);
+  if (!opts.show_stats) {
+    gStyle->SetOptStat(0);
+  }
+  gStyle->SetPalette(opts.palette);
   auto legend = new TLegend();
   int i = 0;
   for (auto &pe : data) {
@@ -251,19 +340,58 @@ Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement> > &data) {
     } else {
       pe->Draw("");
     }
+    //     if (opts.title) {
+    //       pe->setTitle(opts.title.value());
+    //     }
+    //     if (opts.xlabel) {
+    //       pe->getXAxis()->SetTitle(opts.xlabel->c_str());
+    //     }
+    //     if (opts.ylabel) {
+    //       pe->getYAxis()->SetTitle(opts.ylabel->c_str());
+    //     }
     setAxisProperties(pe->getXAxis(), pe->getYAxis());
     pe->addToLegend(legend);
     ++i;
+  }
+  if (opts.logx) {
+    pad->SetLogx();
+  }
+  if (opts.logy) {
+    pad->SetLogx();
   }
   setupLegend(legend);
   return pad;
 }
 
-Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den) {
+Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den,
+               PlotOptions &opts) {
   pad->cd();
-  auto ratio_plot = new TGraphAsymmErrors(num->getTotals(), den->getTotals());
+  if (!opts.show_stats) {
+    gStyle->SetOptStat(0);
+  }
+  gStyle->SetPalette(opts.palette);
+  auto ratio_plot =
+      new TGraphAsymmErrors(num->getTotals(), den->getTotals(), "pois");
   ratio_plot->Draw();
-  pad->SaveAs("test.pdf");
+  num->setMarkAtt(ratio_plot);
+  num->setLineAtt(ratio_plot);
+  auto xaxis = ratio_plot->GetXaxis();
+  auto yaxis = ratio_plot->GetYaxis();
+  if (opts.xlabel) {
+    xaxis->SetTitle(opts.xlabel->c_str());
+  }
+  if (opts.ylabel) {
+    yaxis->SetTitle(opts.ylabel->c_str());
+  }
+  yaxis->SetRangeUser(0, 1.5);
+  xaxis->SetLimits(num->getMin(), num->getMax());
+  if (opts.logx) {
+    pad->SetLogx();
+  }
+  if (opts.logy) {
+    pad->SetLogx();
+  }
+  ratio_plot->Draw("SAME");
   return pad;
 }
 
@@ -334,7 +462,27 @@ void makeFreeBindings(sol::state &lua) {
   lua["simple"] = simplePlot;
   lua["ratio_plot"] = ratioPlot;
   lua["make_plot"] = newPlot;
-  lua["finalize_input_data"] = finalizeManyInputData;
+  lua["create_options"] = [](sol::table params) {
+    PlotOptions po;
+    //    sol::optional<std::string> xlabel = params["xlabel"];
+    //    if (xlabel) {
+    //      po.xlabel = xlabel.value();
+    //    }
+    //    sol::optional<std::string> ylabel = params["ylabel"];
+    //    if (ylabel) {
+    //      po.ylabel = ylabel.value();
+    //    }
+    //    sol::optional<std::string> title = params["title"];
+    //    if (title) {
+    //      po.title = title.value();
+    //    }
+    //    po.logx = params["logx"].get_or(false);
+    //    po.logy = params["logy"].get_or(false);
+    //    po.palette = params["palette"].get_or(kRainBow);
+    return po;
+  };
+  lua["finalize_input_data"] =
+      sol::overload(finalizeManyInputData, finalizeInputData);
   lua["expand_data"] = expand;
   lua["save_pad"] = [](Pad *p, const std::string &s) { p->SaveAs(s.c_str()); };
 
@@ -345,23 +493,16 @@ void makeFreeBindings(sol::state &lua) {
 }
 
 int main(int argc, char *argv[]) {
+  // TH1::AddDirectory(kFALSE);
   sol::state lua;
-  lua.open_libraries(sol::lib::base, sol::lib::string);
+
+  lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table);
   makeBindings(lua);
   makeFreeBindings(lua);
 
   CLI::App app{ "Root plotter interface" };
   app.add_option("-f,--file", "A help string");
   CLI11_PARSE(app, argc, argv);
-  auto ds1 =
-      DataSource("../../Research/rpvsusy/data/08_15_2022_FixedBackground/"
-                 "2018_RPV2W_mS-450_mB-0.root",
-                 "rpv 450");
-  auto ds2 =
-      DataSource("../../Research/rpvsusy/data/08_15_2022_FixedBackground/"
-                 "2018_RPV2W_mS-650_mB-0.root",
-                 "rpv 650");
-  auto ss1 = SourceSet(std::vector<DataSource *>{ &ds1, &ds2 });
   lua.script_file("example.lua");
   return 0;
 }
