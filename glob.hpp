@@ -11,7 +11,7 @@ inline bool match_impl(const Iterator pattern_begin, const Iterator pattern_end,
                        const ValueType zero_or_more,
                        const ValueType exactly_one) {
   typedef typename std::iterator_traits<Iterator>::value_type type;
-  const Iterator null_itr(0);
+  const Iterator null_itr;
   Iterator p_itr = pattern_begin;
   Iterator d_itr = data_begin;
   Iterator np_itr = null_itr;
