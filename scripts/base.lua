@@ -98,7 +98,9 @@ function datamc_ratio(args)
       for i=2,#final do
          ratio_plot(bot, final[i], final[1],
                     create_options(
-                       overwrite_table(args.opts,{title="", ylabel="Data/MC"}))
+                       overwrite_table(args.opts,
+                                       {
+                                          title="", ylabel="Data/MC", yrange={0,1.5}}))
          )
       end
       simple(top, final,  create_options(overwrite_table(args.opts, {xlabel=nil})))

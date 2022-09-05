@@ -68,6 +68,7 @@ std::string SourceSet::to_string() {
 
 void bindData(sol::state &lua) {
     // clang-format off
+    lua["all_data_sources"] = &data_sources;
     lua["finalize_input_data"] =
         sol::overload(finalizeManyInputData, finalizeInputData);
     lua["expand_data"] = expand;

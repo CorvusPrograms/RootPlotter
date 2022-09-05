@@ -6,6 +6,7 @@
 #include <sol/sol.hpp>
 
 #include "TCanvas.h"
+#include "TGAxis.h"
 #include "TGraphAsymmErrors.h"
 #include "TLegend.h"
 #include "TPad.h"
@@ -51,9 +52,11 @@ Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
             pe->getYAxis()->SetRangeUser(opts.yrange->first,
                                          opts.yrange->second);
             pe->setMinRange(opts.yrange->first);
-            pe->setMaxRange(opts.yrange->second);
+            if (opts.yrange->first < opts.yrange->second) {
+                pe->setMaxRange(opts.yrange->second);
+            }
         } else {
-            pe->setMinRange(std::max(pe->getMinRange()-0.0001, 0.0000000001 ));
+            pe->setMinRange(std::max(pe->getMinRange() - 0.0001, 0.0000000001));
         }
         pe->addToLegend(legend);
         ++i;
@@ -78,6 +81,7 @@ Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den,
 
     auto xaxis = ratio_plot->GetXaxis();
     auto yaxis = ratio_plot->GetYaxis();
+
     setAxisProperties(xaxis, yaxis);
     if (opts.title) {
         ratio_plot->SetTitle(opts.title.value().c_str());
@@ -97,7 +101,7 @@ Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den,
     }
 
     if (opts.yrange) {
-        yaxis->SetLimits(opts.yrange->first, opts.yrange->second);
+        yaxis->SetRangeUser(opts.yrange->first, opts.yrange->second);
     } else {
         yaxis->SetRangeUser(0, 1.5);
     }

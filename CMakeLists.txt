@@ -100,6 +100,6 @@ target_link_libraries(plotter PUBLIC
 
 
 install(TARGETS plotter DESTINATION ${GNU_INSTALL_BINDIR})
-install(FILES scripts/base.lua
-        DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/rootplotter/scripts)
+install(DIRECTORY scripts
+        DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/rootplotter)
 
