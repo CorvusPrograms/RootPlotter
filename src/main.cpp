@@ -9,6 +9,7 @@
 #include "data.h"
 #include "plot_element.h"
 #include "plotters.h"
+#include "install_info.h"
 
 int main(int argc, char* argv[]) {
     // TH1::AddDirectory(kFALSE);
@@ -25,7 +26,7 @@ int main(int argc, char* argv[]) {
                                            "Path to the configuration file")
                                 ->required();
     CLI11_PARSE(app, argc, argv);
-    lua.script_file("scripts/base.lua");
+    lua.script_file(APP_INSTALL_DATAROOTDIR "/base.lua");
     {
         CLI::AutoTimer timer{"Creating Graphs", CLI::Timer::Big};
         lua.script_file("example.lua");

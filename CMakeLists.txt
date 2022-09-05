@@ -81,30 +81,25 @@ target_link_libraries(lua PUBLIC ${CMAKE_DL_LIBS})
 target_include_directories(lua SYSTEM INTERFACE ${includeDir})
 
 
-set(TRACY_NO_EXIT ON)
-set(TRACY_ENABLE ON)
-FetchContent_Declare(tracy
-  GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-  GIT_TAG a8511d357650282c6915f7aa9775e9c4945e42b5
-  GIT_SHALLOW TRUE GIT_PROGRESS TRUE )
-# FetchContent_Declare( tracy GIT_REPOSITORY https://github.com/wolfpld/tracy.git GIT_TAG master GIT_SHALLOW TRUE GIT_PROGRESS TRUE )
 
-FetchContent_MakeAvailable(tracy)
+set(PLOTTER_INSTALL_DATADIR ${CMAKE_INSTALL_FULL_DATADIR}/rootplotter/scripts)
+configure_file(configure/install_info.h.in ${PROJECT_BINARY_DIR}/config/install_info.h)
+add_library(install_config INTERFACE)
+target_include_directories(install_config INTERFACE ${PROJECT_BINARY_DIR}/config)
 
-#set_property(SOURCE src/main.cpp APPEND PROPERTY OBJECT_DEPENDS ${base_out})
 add_executable(plotter src/plotters.cpp src/data.cpp src/main.cpp src/plot_element.cpp)
 target_include_directories(plotter PUBLIC ${CMAKE_BINARY_DIR}/generated)
 
-
-
 target_link_libraries(plotter PUBLIC
-  TracyClient
-  Tracy::TracyClient
   fmt::fmt
   ROOT::Core ROOT::Hist ROOT::RIO ROOT::Graf ROOT::Gpad sol2
   lua
   CLI11::CLI11
+  install_config
   )
 
-#install(TARGETS plotter DESTINATION ${GNU_INSTALL_BINDIR})
+
+install(TARGETS plotter DESTINATION ${GNU_INSTALL_BINDIR})
+install(FILES scripts/base.lua
+        DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/rootplotter/scripts)
 
