@@ -6,14 +6,21 @@ project(RootPlotter)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+
 if (MSVC)
   add_compile_options(/W4 /WX)
   add_compile_options( $<$<CONFIG:RELEASE>:/O3> $<$<CONFIG:DEBUG>:/O0> $<$<CONFIG:DEBUG>:/g>)
 else()
   add_compile_options(-Wno-unused-variable)
   add_compile_options(-Wall -Wextra -pedantic -Wno-unused-variable -ftemplate-backtrace-limit=0)
-  add_compile_options( $<$<CONFIG:RELEASE>:-O3> $<$<CONFIG:DEBUG>:-O0> $<$<CONFIG:DEBUG>:-g> $<$<CONFIG:DEBUG>:-fsanitize=address> ) 
-  add_link_options( $<$<CONFIG:DEBUG>:-fsanitize=address> ) 
+  add_compile_options( $<$<CONFIG:RELEASE>:-O3>
+    $<$<CONFIG:DEBUG>:-O0>
+    $<$<CONFIG:DEBUG>:-g>
+   # $<$<CONFIG:DEBUG>:-fsanitize=address>
+   ) 
+  add_link_options(
+   # $<$<CONFIG:DEBUG>:-fsanitize=address>
+    ) 
 endif()
 
 FetchContent_Declare( fmt
@@ -76,12 +83,31 @@ file(COPY ${publicHeaderFiles} DESTINATION ${includeDir})
 target_link_libraries(lua PUBLIC ${CMAKE_DL_LIBS})
 target_include_directories(lua SYSTEM INTERFACE ${includeDir})
 
-FetchContent_Declare( tracy
-  GIT_REPOSITORY https://github.com/wolfpld/tracy.git GIT_TAG a8511d357650282c6915f7aa9775e9c4945e42b5 GIT_SHALLOW TRUE GIT_PROGRESS TRUE )
+
+set(TRACY_NO_EXIT ON)
+set(TRACY_ENABLE ON)
+FetchContent_Declare(tracy
+  GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+  GIT_TAG a8511d357650282c6915f7aa9775e9c4945e42b5
+  GIT_SHALLOW TRUE GIT_PROGRESS TRUE )
+# FetchContent_Declare( tracy GIT_REPOSITORY https://github.com/wolfpld/tracy.git GIT_TAG master GIT_SHALLOW TRUE GIT_PROGRESS TRUE )
 
 FetchContent_MakeAvailable(tracy)
-set(TRACY_NO_EXIT 1)
 
-add_executable(plotter plotter.cpp)
-target_link_libraries(plotter PUBLIC fmt::fmt ROOT::Core ROOT::Hist ROOT::RIO nlohmann_json::nlohmann_json ROOT::Graf ROOT::Gpad sol2 lua  CLI11::CLI11 TracyClient)
-install(TARGETS plotter DESTINATION ${GNU_INSTALL_BINDIR})
+#set_property(SOURCE src/main.cpp APPEND PROPERTY OBJECT_DEPENDS ${base_out})
+add_executable(plotter src/plotters.cpp src/data.cpp src/main.cpp src/plot_element.cpp)
+target_include_directories(plotter PUBLIC ${CMAKE_BINARY_DIR}/generated)
+
+
+
+target_link_libraries(plotter PUBLIC
+  TracyClient
+  Tracy::TracyClient
+  fmt::fmt
+  ROOT::Core ROOT::Hist ROOT::RIO ROOT::Graf ROOT::Gpad sol2
+  lua
+  CLI11::CLI11
+  )
+
+#install(TARGETS plotter DESTINATION ${GNU_INSTALL_BINDIR})
+
