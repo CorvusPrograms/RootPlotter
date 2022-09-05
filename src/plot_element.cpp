@@ -1,9 +1,11 @@
 #include "plot_element.h"
 
-#include <sol/sol.hpp>
 #include <TLegend.h>
-#include <TStyle.h>
 #include <TList.h>
+#include <TStyle.h>
+
+#include <sol/sol.hpp>
+
 #include "util.h"
 
 Histogram::Histogram(DataSource *s, TH1 *h) : source{s}, hist{h} {}
@@ -20,6 +22,10 @@ void Histogram::setupRanges() {
         getYAxis()->SetRange(yr->first, yr->second);
     }
 }
+void Histogram::setMinRange(float v) { hist->SetMinimum(v); }
+void Histogram::setMaxRange(float v) { hist->SetMaximum(v); }
+float Histogram::getMinRange() const { return hist->GetMinimum(); }
+float Histogram::getMaxRange() const { return hist->GetMaximum(); }
 TH1 *Histogram::getHistogram() { return hist; }
 TH1 *Histogram::getTotals() { return hist; }
 float Histogram::getIntegral() { return hist->Integral(); }
@@ -36,11 +42,11 @@ void Histogram::setFillStyle() {}
 void Histogram::setMarkerStyle() {}
 void Histogram::setLineStyle() {}
 
-float Histogram::getMin() {
+float Histogram::getMinDomain() {
     auto xaxis = getXAxis();
     return xaxis->GetBinLowEdge(xaxis->GetFirst());
 }
-float Histogram::getMax() {
+float Histogram::getMaxDomain() {
     auto xaxis = getXAxis();
     return xaxis->GetBinUpEdge(xaxis->GetLast());
 }
@@ -82,6 +88,9 @@ void Stack::setupRanges() {
         getYAxis()->SetRange(yr->first, yr->second);
     }
 }
+
+void Stack::setMinRange(float v) { hist->SetMinimum(v); }
+void Stack::setMaxRange(float v) { hist->SetMaximum(v); }
 void Stack::setTitle(const std::string &s) { hist->SetTitle(s.c_str()); }
 TH1 *Stack::getHistogram() { return hist->GetHistogram(); }
 TH1 *Stack::getTotals() {
@@ -110,11 +119,14 @@ void Stack::Draw(const std::string &s) {
     hist->Draw((s + " hist").c_str());
 }
 std::string Stack::to_string() const { return sources[0]->name; }
-float Stack::getMin() {
+float Stack::getMinDomain() {
     auto xaxis = getXAxis();
     return xaxis->GetBinLowEdge(xaxis->GetFirst());
 }
-float Stack::getMax() {
+float Stack::getMaxDomain() {
     auto xaxis = getXAxis();
     return xaxis->GetBinUpEdge(xaxis->GetLast());
 }
+
+float Stack::getMinRange() const { return hist->GetMinimum(); }
+float Stack::getMaxRange() const { return hist->GetMaximum(); }

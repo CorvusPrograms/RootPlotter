@@ -46,8 +46,7 @@ end
 function simple_plot(args)
    local pattern = args[1]
    local data = args[2]
-   local t = data[1]:source_set():get_keys()
-   x = expand_data(data, t, args[1])
+   x = expand_data(data, args[1])
    ret = {}
    for k,v in ipairs(x) do
       pad = make_pad()
@@ -64,7 +63,7 @@ end
 function ratio(args)
    local pattern = args[1]
    local data = args[2]
-   x = expand_data(data, data[1].source:get_keys(), pattern)
+   x = expand_data(data,  pattern)
    ret = {}
    for k,v in ipairs(x) do
       pad = make_pad()
@@ -77,7 +76,7 @@ end
 function datamc_ratio(args)
    local pattern = args[1]
    local data = args[2]
-   x = expand_data(data, data[1]:source_set():get_keys(), pattern)
+   x = expand_data(data, pattern)
    ret = {}
    for k,v in ipairs(x) do
       pad = make_pad();
@@ -96,13 +95,13 @@ function datamc_ratio(args)
       plotpad.m_right(bot, 0.05)
 
       final=finalize_input_data(v.inputs)
-      simple(top, final,  create_options(overwrite_table(args.opts, {xlabel=nil})))
       for i=2,#final do
          ratio_plot(bot, final[i], final[1],
                     create_options(
                        overwrite_table(args.opts,{title="", ylabel="Data/MC"}))
          )
       end
+      simple(top, final,  create_options(overwrite_table(args.opts, {xlabel=nil})))
       plotpad.update(pad)
       table.insert(ret, {v.captures, pad})
    end

@@ -11,7 +11,6 @@ class TLegend;
 
 using Pad = TVirtualPad;
 
-
 struct PlotElement {
     std::optional<std::pair<float, float>> xrange = std::nullopt,
                                            yrange = std::nullopt;
@@ -25,8 +24,13 @@ struct PlotElement {
     virtual void Draw(const std::string &s) = 0;
     virtual std::string to_string() const = 0;
 
-    virtual float getMin() = 0;
-    virtual float getMax() = 0;
+    virtual float getMinDomain() = 0;
+    virtual float getMaxDomain() = 0;
+
+    virtual void setMinRange(float v) = 0;
+    virtual void setMaxRange(float v) = 0;
+    virtual float getMinRange() const = 0;
+    virtual float getMaxRange() const = 0;
 
     virtual void setFillAtt(TAttFill *){};
     virtual void setMarkAtt(TAttMarker *){};
@@ -72,8 +76,13 @@ struct Histogram : public PlotElement {
     void setFillStyle();
     void setMarkerStyle();
     void setLineStyle();
-    virtual float getMin();
-    virtual float getMax();
+    virtual float getMinDomain();
+    virtual float getMaxDomain();
+    virtual void setMinRange(float v);
+    virtual void setMaxRange(float v);
+
+    virtual float getMinRange() const;
+    virtual float getMaxRange() const;
     virtual std::string to_string() const;
     virtual void setFillAtt(TAttFill *fill_att);
     virtual void setMarkAtt(TAttMarker *mark_att);
@@ -92,13 +101,18 @@ struct Stack : public PlotElement {
     virtual TH1 *getHistogram();
     virtual TH1 *getTotals();
 
+    virtual void setMinRange(float v);
+    virtual void setMaxRange(float v);
+    virtual float getMinRange() const;
+    virtual float getMaxRange() const;
+
     virtual float getIntegral();
     virtual TAxis *getXAxis();
     virtual TAxis *getYAxis();
     virtual void Draw(const std::string &s);
     virtual std::string to_string() const;
-    virtual float getMin();
-    virtual float getMax();
+    virtual float getMinDomain();
+    virtual float getMaxDomain();
     virtual ~Stack() = default;
 };
 

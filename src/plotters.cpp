@@ -1,5 +1,7 @@
 #include "plotters.h"
 
+#include <fmt/format.h>
+
 #include <filesystem>
 #include <sol/sol.hpp>
 
@@ -13,13 +15,19 @@
 Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
                 const PlotOptions &opts) {
     pad->cd();
+    gStyle->SetPalette(opts.palette);
     if (!opts.show_stats) {
         gStyle->SetOptStat(0);
     }
-    gStyle->SetPalette(opts.palette);
     auto legend = new TLegend();
     int i = 0;
     for (auto &pe : data) {
+        if (opts.logx) {
+            pad->SetLogx();
+        }
+        if (opts.logy) {
+            pad->SetLogy();
+        }
         if (i > 0) {
             pe->Draw("Same");
         } else {
@@ -42,15 +50,13 @@ Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
         if (opts.yrange) {
             pe->getYAxis()->SetRangeUser(opts.yrange->first,
                                          opts.yrange->second);
+            pe->setMinRange(opts.yrange->first);
+            pe->setMaxRange(opts.yrange->second);
+        } else {
+            pe->setMinRange(std::max(pe->getMinRange()-0.0001, 0.0000000001 ));
         }
         pe->addToLegend(legend);
         ++i;
-    }
-    if (opts.logx) {
-        pad->SetLogx();
-    }
-    if (opts.logy) {
-        pad->SetLogx();
     }
     setupLegend(legend);
     return pad;
@@ -67,7 +73,9 @@ Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den,
         new TGraphAsymmErrors(num->getTotals(), den->getTotals(), "pois");
     num->setMarkAtt(ratio_plot);
     num->setLineAtt(ratio_plot);
+
     ratio_plot->Draw();
+
     auto xaxis = ratio_plot->GetXaxis();
     auto yaxis = ratio_plot->GetYaxis();
     setAxisProperties(xaxis, yaxis);
@@ -83,20 +91,19 @@ Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den,
     if (opts.xrange) {
         xaxis->SetLimits(opts.xrange->first, opts.xrange->second);
     } else {
-        xaxis->SetLimits(num->getMin(), num->getMax());
+        ratio_plot->GetHistogram()->GetXaxis()->SetLimits(opts.xrange->first,
+                                                          opts.xrange->second);
+        xaxis->SetLimits(num->getMinDomain(), num->getMaxDomain());
     }
+
     if (opts.yrange) {
         yaxis->SetLimits(opts.yrange->first, opts.yrange->second);
     } else {
         yaxis->SetRangeUser(0, 1.5);
     }
-    if (opts.logx) {
-        pad->SetLogx();
-    }
-    if (opts.logy) {
-        pad->SetLogx();
-    }
-    ratio_plot->Draw("SAME");
+    pad->SetFrameBorderMode(0);
+    pad->SetBorderMode(0);
+    pad->SetBorderSize(0);
     return pad;
 }
 
@@ -135,9 +142,6 @@ void bindPlotters(sol::state &lua) {
     lua["simple"] = simplePlot;
     lua["ratio_plot"] = ratioPlot;
     lua["make_pad"] = sol::overload<Pad *(), Pad *(int, int)>(newPlot, newPlot);
-    lua["finalize_input_data"] =
-        sol::overload(finalizeManyInputData, finalizeInputData);
-    lua["expand_data"] = expand;
     lua["plotpad"] = lua.create_table();
     lua["plotpad"]["save"] = [](Pad *p, const std::string &s) {
         std::filesystem::path path(s);
@@ -177,6 +181,14 @@ void bindPlotters(sol::state &lua) {
             auto [xl, xu] = xrt.value().get<sof, sof>(1, 2);
             if (xl && xu) {
                 po.xrange = {xl.value(), xu.value()};
+            }
+        }
+        auto yrt = params.get<sol::optional<sol::table>>("yrange");
+        if (yrt) {
+            using sof = sol::optional<float>;
+            auto [yl, yu] = yrt.value().get<sof, sof>(1, 2);
+            if (yl && yu) {
+                po.yrange = {yl.value(), yu.value()};
             }
         }
         po.logx = params["logx"].get_or(false);

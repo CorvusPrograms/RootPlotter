@@ -9,9 +9,9 @@ qcd = DataSource.create(base .. "2018_QCD.root"):name("QCD"):palette_idx(600)
 
 
 sig = SourceSet.new({rpv4,rpv6,rpv8})
-bkg = SourceSet.new({qcd,tt})
+bkg = SourceSet.new({tt,qcd})
 
-toplot = {"nbjets_medium", "met", "WPt", "WPhi"}
+toplot = {"nbjets_medium"}
 
 options.outdir = "plots/ratio/"
 -- for k,v in pairs(toplot) do
@@ -22,12 +22,19 @@ options.outdir = "plots/ratio/"
 --         }, opts={xlabel="MET", ylabel="Events", title="Missing Transverse Momentum", palette=palettes.RainBow}
 --    }
 -- end
-options.outdir = "plots/stack/"
 for k,v in pairs(toplot) do
-   plot{simple_plot, v .. "_*Lep",
+   options.outdir = "plots/ratio/"
+   plot{datamc_ratio, v .. "_*Lep",
         {
-           InputData:new(bkg):normalize(true):norm_to(10):stack(true),
-           InputData:new(sig):normalize(true):norm_to(10),
-        }, opts={xlabel="MET", ylabel="Events", title="Missing Transverse Momentum", palette=palettes.RainBow}
+           InputData:new(bkg):normalize(false):stack(true),
+           InputData:new(sig):normalize(false),
+        }, opts={
+           xlabel=v,
+           ylabel="Events",
+           title=v,
+           palette=palettes.RainBow,
+           yrange={1,10e14},
+           logy=true
+                }
    }
 end

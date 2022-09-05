@@ -1,10 +1,29 @@
 #include "data.h"
 
-#include "TFile.h"
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+
+#include <algorithm>
 #include <sol/sol.hpp>
+
+#include "TFile.h"
 #include "util.h"
+
+std::unordered_set<std::string> SourceSet::getKeys() const {
+    return common_keys;
+}
+
+void SourceSet::initKeys() {
+    std::unordered_set<std::string> ret = sources[0]->keys;
+    for (std::size_t i = 1; i < sources.size(); ++i) {
+        for (const auto &k : sources[i]->keys) {
+            if (ret.count(k) == 0) {
+                ret.erase(k);
+            }
+        }
+    }
+    common_keys = std::move(ret);
+}
 
 static std::vector<std::unique_ptr<DataSource>> data_sources;
 
@@ -49,6 +68,10 @@ std::string SourceSet::to_string() {
 
 void bindData(sol::state &lua) {
     // clang-format off
+    lua["finalize_input_data"] =
+        sol::overload(finalizeManyInputData, finalizeInputData);
+    lua["expand_data"] = expand;
+
     auto data_source_type = lua.new_usertype<DataSource>(
         "DataSource",
         "create", sol::factories(&DataSource::create),
@@ -98,6 +121,11 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
     auto stack = new THStack();
     for (DataSource *source : input.data.source_set->sources) {
         TH1 *hist = source->getHist(input.name);
+        if (!hist) {
+            throw std::runtime_error(fmt::format(
+                "Could not get a histogram from file {} with name {}",
+                source->name, input.name));
+        }
         if (input.data.normalize) {
             hist->Scale(input.data.norm_to / hist->Integral());
         }
@@ -132,8 +160,15 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
 }
 
 std::vector<MatchedKey> expand(std::vector<InputData> in,
-                               const std::unordered_set<std::string> &keys,
                                const std::string &pattern) {
+    std::unordered_set<std::string> keys = in[0].source_set->getKeys();
+    for (std::size_t i = 1; i < in.size(); ++i) {
+        for (const auto &k : in[i].source_set->getKeys()) {
+            if (keys.count(k) == 0) {
+                keys.erase(k);
+            }
+        }
+    }
     if (!glob::isGlob(pattern)) {
         MatchedKey single;
         for (const auto &input : in) {
@@ -152,6 +187,11 @@ std::vector<MatchedKey> expand(std::vector<InputData> in,
             }
             ret.push_back(single);
         }
+    }
+    if (ret.empty()) {
+        throw std::runtime_error(fmt::format(
+            "Pattern '{}' does not match any key in the data sources",
+            pattern));
     }
     return ret;
 }

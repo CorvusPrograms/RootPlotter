@@ -52,13 +52,14 @@ struct DataSource {
 
 struct SourceSet {
     std::vector<DataSource *> sources;
+    std::unordered_set<std::string> common_keys;
     SourceSet() = default;
-    SourceSet(const std::vector<DataSource *> dsv) : sources{dsv} {}
-    std::string to_string();
-    std::unordered_set<std::string> getKeys() {
-        assert(sources.size() > 0);
-        return sources[0]->keys;
+    SourceSet(const std::vector<DataSource *> dsv) : sources{dsv} {
+        initKeys();
     }
+    std::string to_string();
+    std::unordered_set<std::string> getKeys() const;
+    void initKeys();
 };
 
 struct InputData {
@@ -90,7 +91,6 @@ class state;
 void bindData(sol::state &lua);
 
 std::vector<MatchedKey> expand(std::vector<InputData> in,
-                               const std::unordered_set<std::string> &keys,
                                const std::string &pattern);
 
 std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
@@ -99,7 +99,7 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
 std::vector<std::unique_ptr<PlotElement>> finalizeManyInputData(
     const std::vector<PlotterInput> &input);
 
-namespace{
+namespace {
 class state;
 }
 void bindPlotters(sol::state &lua);
