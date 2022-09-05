@@ -4,58 +4,36 @@ base = "../RPVResearch/data/08_15_2022_FixedBackground/"
 rpv4 = DataSource.create(base .. "2018_RPV2W_mS-450_mB-0.root"):name("RPV 450"):palette_idx(100)
 rpv8 = DataSource.create(base .. "2018_RPV2W_mS-850_mB-0.root"):name("RPV 850"):palette_idx(200)
 rpv6 = DataSource.create(base .. "2018_RPV2W_mS-650_mB-0.root"):name("RPV 650"):palette_idx(300)
-tt = DataSource.create(base .. "2018_TT.root"):name("TT"):palette_idx(500)
+tt = DataSource.create(base .. "2018_TT.root"):name("t#bar{t}"):palette_idx(500)
 qcd = DataSource.create(base .. "2018_QCD.root"):name("QCD"):palette_idx(600)
-
 
 sig = SourceSet.new({rpv4,rpv6,rpv8})
 bkg = SourceSet.new({tt,qcd})
+
+my_palette = palettes.RainBow
 
 toplot = {
    { "nbjets_medium", "NBjets Medium Working Point", nil},
    { "met", "MET", {0,300}},
 }
 for i=1,2 do
-   for _ , v in pairs({"Pt", "E", "Eta", "Phi"}) do
+   for _ , v in pairs({{"Pt" , "p_{T}"}, {"E", "Energy"}, {"Eta", "#eta"}, {"Phi","#phi"}}) do
       table.insert( toplot,
-                    { string.format("Jet_%d_" .. v, i),
-                      string.format("Jet %d " .. v, i), nil})
+                    { string.format("Jet_%d_" .. v[1], i),
+                      string.format("Jet %d " .. v[2], i), nil})
    end
 end
 
-default_inputs =  {
-}
-
 for k,v in pairs(toplot) do
-   options.outdir = "plots/ratio/"
-   plot{datamc_ratio, v[1] .. "_*Lep", {
-
-           InputData:new(bkg):normalize(false):stack(true),
-           InputData:new(sig):normalize(false)
-                                       }
-        , opts={
-           xlabel=v[2],
-           ylabel="Events",
-           title=v[2],
-           palette=palettes.RainBow,
-           xrange = v[3],
-           yrange={1,0},
-           logy=true
-        }
-   }
-   options.outdir = "plots/stack"
-   plot{datamc_ratio, v[1] .. "_*Lep", {
-           InputData:new(bkg):normalize(false):stack(true),
-           InputData:new(sig):normalize(false)
-                                       }
-        , opts={
-           xlabel=v[2],
-           ylabel="Events",
-           title=v[2],
-           palette=palettes.RainBow,
-           xrange = v[3],
-           yrange={1,0},
-           logy=true
-        }
-   }
+   for _, n in pairs({true, false}) do
+      add = n and "normed_" or ""
+      options.outdir = string.format("plots/%sratio/", add)
+      plot{datamc_ratio, v[1] .. "_*Lep", {InputData:new(bkg):normalize(n):stack(true), InputData:new(sig):normalize(true)} ,
+           opts={xlabel=v[2], ylabel="Events", title=v[2], palette=my_palette, xrange = v[3], yrange={1,0}, logy=true}
+      }
+      options.outdir = string.format("plots/%sstack/", add)
+      plot{datamc_ratio, v[1] .. "_*Lep", {InputData:new(bkg):normalize(n):stack(true), InputData:new(sig):normalize(true)}
+           ,opts={xlabel=v[2], ylabel="Events", title=v[2], palette=my_palette, xrange = v[3], yrange={1,0}, logy=true}
+      }
+   end
 end
