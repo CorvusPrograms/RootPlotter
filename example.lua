@@ -13,16 +13,41 @@ bkg = SourceSet.new({tt,qcd})
 
 toplot = {
    { "nbjets_medium", "NBjets Medium Working Point", nil},
-   { "met", "MET", {0,300}}
+   { "met", "MET", {0,300}},
+}
+for i=1,2 do
+   for _ , v in pairs({"Pt", "E", "Eta", "Phi"}) do
+      table.insert( toplot,
+                    { string.format("Jet_%d_" .. v, i),
+                      string.format("Jet %d " .. v, i), nil})
+   end
+end
+
+default_inputs =  {
 }
 
-options.outdir = "plots/ratio/"
-default_inputs =  {InputData:new(bkg):normalize(false):stack(true), InputData:new(sig):normalize(false)}
-
-options.outdir = "plots/ratio/"
-
 for k,v in pairs(toplot) do
-   plot{simple_plot, v[1] .. "_*Lep", default_inputs
+   options.outdir = "plots/ratio/"
+   plot{datamc_ratio, v[1] .. "_*Lep", {
+
+           InputData:new(bkg):normalize(false):stack(true),
+           InputData:new(sig):normalize(false)
+                                       }
+        , opts={
+           xlabel=v[2],
+           ylabel="Events",
+           title=v[2],
+           palette=palettes.RainBow,
+           xrange = v[3],
+           yrange={1,0},
+           logy=true
+        }
+   }
+   options.outdir = "plots/stack"
+   plot{datamc_ratio, v[1] .. "_*Lep", {
+           InputData:new(bkg):normalize(false):stack(true),
+           InputData:new(sig):normalize(false)
+                                       }
         , opts={
            xlabel=v[2],
            ylabel="Events",

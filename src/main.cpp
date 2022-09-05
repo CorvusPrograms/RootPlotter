@@ -33,9 +33,9 @@ int main(int argc, char* argv[]) {
     CLI::Option* pal_opt = app.add_flag(
         "-P", just_palettes, "Print the possible palettes, then exit.");
 
-    CLI::Option* ext_opt =
-        app.add_flag("-E,--extract-keys", extract_keys,
-                     "Extract the keys for a given configuration file, then exit.");
+    CLI::Option* ext_opt = app.add_flag(
+        "-E,--extract-keys", extract_keys,
+        "Extract the keys for a given configuration file, then exit.");
 
     CLI::Option* f_opt = app.add_option("file", config_file_name,
                                         "Path to the configuration file");
@@ -50,7 +50,11 @@ int main(int argc, char* argv[]) {
     if (extract_keys) {
         lua.script("function plot(...) end");
     }
-    lua.script_file(config_file_name);
+    try {
+        lua.script_file(config_file_name);
+    } catch (std::exception& e) {
+        fmt::print("ENCOUNTERED EXCEPTION\n{}", e.what());
+    }
     if (extract_keys) {
         lua.script_file(APP_INSTALL_DATAROOTDIR "/extract_keys.lua");
         std::exit(0);

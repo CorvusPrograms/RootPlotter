@@ -16,10 +16,10 @@ else()
   add_compile_options( $<$<CONFIG:RELEASE>:-O3>
     $<$<CONFIG:DEBUG>:-O0>
     $<$<CONFIG:DEBUG>:-g>
-   # $<$<CONFIG:DEBUG>:-fsanitize=address>
+    $<$<CONFIG:DEBUG>:-fsanitize=address>
    ) 
   add_link_options(
-   # $<$<CONFIG:DEBUG>:-fsanitize=address>
+    $<$<CONFIG:DEBUG>:-fsanitize=address>
     ) 
 endif()
 
