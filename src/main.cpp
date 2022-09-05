@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 
     CLI::Option* ext_opt =
         app.add_flag("-E,--extract-keys", extract_keys,
-                     "Print the possible palettes, then exit.");
+                     "Extract the keys for a given configuration file, then exit.");
 
     CLI::Option* f_opt = app.add_option("file", config_file_name,
                                         "Path to the configuration file");
