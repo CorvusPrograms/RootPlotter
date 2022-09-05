@@ -1,6 +1,8 @@
 #include <string>
 #include <iterator>
 
+// From: https://www.partow.net/programming/wildcardmatching/index.html
+
 namespace glob {
 namespace details {
 template <typename Compare, typename Iterator,
