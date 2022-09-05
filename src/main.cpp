@@ -1,6 +1,7 @@
 #include <TError.h>
 
 #include <sol/sol.hpp>
+#include <fmt/format.h>
 
 #include "CLI/App.hpp"
 #include "CLI/Config.hpp"
@@ -19,7 +20,8 @@ int main(int argc, char* argv[]) {
     bindPlotters(lua);
     bindData(lua);
     bindPalettes(lua);
-    CLI::App app{"Root plotter interface"};
+    CLI::App app{fmt::format("Root plotter interface\nRootPlotter version {}.{}",
+                             PLOTTER_VERSION_MAJOR, PLOTTER_VERSION_MINOR)};
     std::string config_file_name;
     CLI::Option* file_opt = app.add_option("file", config_file_name,
                                            "Path to the configuration file")
