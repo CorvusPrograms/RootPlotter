@@ -27,9 +27,6 @@ FetchContent_Declare( fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt
   GIT_TAG b6f4ceaed0a0a24ccf575fab6c56dd50ccf6f1a9)
 
-FetchContent_Declare(json
-  GIT_REPOSITORY https://github.com/nlohmann/json/
-  GIT_TAG 4f8fba14066156b73f1189a2b8bd568bde5284c5)
 
 FetchContent_Declare(sol2
   GIT_REPOSITORY https://github.com/ThePhD/sol2/
@@ -40,7 +37,7 @@ FetchContent_Declare(cli11
   GIT_REPOSITORY https://github.com/CLIUtils/CLI11
   GIT_TAG        v2.2.0)
 
-FetchContent_MakeAvailable(fmt json sol2 cli11)
+FetchContent_MakeAvailable(fmt sol2 cli11)
 
 find_package(ROOT 2.26 REQUIRED COMPONENTS RIO Core Hist Tree Thread)
 
