@@ -1,12 +1,14 @@
 #include "plotters.h"
-#include "TPad.h"
-#include "TCanvas.h"
-#include "TStyle.h"
-#include "TLegend.h"
-#include "TGraphAsymmErrors.h"
-#include <filesystem>
 
+#include <filesystem>
 #include <sol/sol.hpp>
+
+#include "TCanvas.h"
+#include "TGraphAsymmErrors.h"
+#include "TLegend.h"
+#include "TPad.h"
+#include "TStyle.h"
+#include "util.h"
 
 Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
                 const PlotOptions &opts) {
@@ -182,6 +184,22 @@ void bindPlotters(sol::state &lua) {
         po.palette = params["palette"].get_or(kRainBow);
         return po;
     };
+
+    auto plot_options_type = lua.new_usertype<PlotOptions>(
+        "PlotOptions", BUILD(PlotOptions, xlabel), BUILD(PlotOptions, ylabel),
+        BUILD(PlotOptions, title), BUILD(PlotOptions, show_stats),
+        BUILD(PlotOptions, logx), BUILD(PlotOptions, logy),
+        BUILD(InputData, yrange), "xrange",
+        [](InputData *c, float x, float y) {
+            c->xrange = {x, y};
+            return c;
+        },
+        "yrange",
+        [](InputData *c, float x, float y) {
+            c->yrange = {x, y};
+            return c;
+        },
+        BUILD(PlotOptions, palette));
 }
 
 void bindPalettes(sol::state &lua) {

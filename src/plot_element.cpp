@@ -59,23 +59,7 @@ void Histogram::setLineAtt(TAttLine *line_att) {
     line_att->SetLineColor(gStyle->GetColorPalette(pidx));
 }
 
-void bindPlotElements(sol::state &lua) {
-    auto plot_options_type = lua.new_usertype<PlotOptions>(
-        "PlotOptions", BUILD(PlotOptions, xlabel), BUILD(PlotOptions, ylabel),
-        BUILD(PlotOptions, title), BUILD(PlotOptions, show_stats),
-        BUILD(PlotOptions, logx), BUILD(PlotOptions, logy),
-        BUILD(InputData, yrange), "xrange",
-        [](InputData *c, float x, float y) {
-            c->xrange = {x, y};
-            return c;
-        },
-        "yrange",
-        [](InputData *c, float x, float y) {
-            c->yrange = {x, y};
-            return c;
-        },
-        BUILD(PlotOptions, palette));
-}
+void bindPlotElements(sol::state &lua) {}
 
 Stack::Stack(const std::vector<DataSource *> s, THStack *h)
     : sources{s}, hist{h} {}

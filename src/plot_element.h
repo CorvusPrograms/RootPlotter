@@ -11,15 +11,6 @@ class TLegend;
 
 using Pad = TVirtualPad;
 
-struct PlotOptions {
-    using SOType = std::optional<std::string>;
-    SOType title = std::nullopt, xlabel = std::nullopt, ylabel = std::nullopt;
-    bool show_stats = false;
-    bool logx = false, logy = false;
-    std::optional<std::pair<float, float>> xrange = std::nullopt,
-                                           yrange = std::nullopt;
-    int palette = kRainBow;
-};
 
 struct PlotElement {
     std::optional<std::pair<float, float>> xrange = std::nullopt,

@@ -7,9 +7,9 @@
 #include "CLI/Formatter.hpp"
 #include "CLI/Timer.hpp"
 #include "data.h"
+#include "install_info.h"
 #include "plot_element.h"
 #include "plotters.h"
-#include "install_info.h"
 
 int main(int argc, char* argv[]) {
     // TH1::AddDirectory(kFALSE);
@@ -19,7 +19,6 @@ int main(int argc, char* argv[]) {
     bindPlotters(lua);
     bindData(lua);
     bindPalettes(lua);
-
     CLI::App app{"Root plotter interface"};
     std::string config_file_name;
     CLI::Option* file_opt = app.add_option("file", config_file_name,
