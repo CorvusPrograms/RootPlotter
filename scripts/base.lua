@@ -133,19 +133,24 @@ function plot(args)
 end
 
 function execute_deferred_plots()
-   print(string.format("Executing %d plots", #NEED_TO_PLOT))
-   for _ , args in ipairs(NEED_TO_PLOT) do
+   total = 0
+   start_time = os.time()
+   print(string.format("Executing %d plot groups.", #NEED_TO_PLOT))
+   for i , args in ipairs(NEED_TO_PLOT) do
       local fun=args[1]
       table.remove(args, 1)
       ret = fun(args)
       for k , v in ipairs(ret) do
+         total = total + 1
          captures = v[1]
-         io.write("                                               \r")
-         io.write(string.format("Plotting name %s\r", captures.HISTNAME))
+         io.write("                                                                            \r")
+         io.write(string.format("Plot [%d:%d/%d], currently plotting histogram %s\r", total, i , #NEED_TO_PLOT, captures.HISTNAME))
          io.flush()
          name = captures.HISTNAME
          save_name = options.outdir ..  captures.HISTNAME .. ".pdf"
          plotpad.save(v[2], save_name)
       end
    end
+   io.write("                                                                            \r")
+   io.write(string.format("Generated %d plots in %d seconds.\n", total, os.time() - start_time))
 end

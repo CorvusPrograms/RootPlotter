@@ -12,6 +12,14 @@ io.stderr:write(
    string.format("Keys for data sources %s are\n", table.concat(sources, ", "))
 )
 
-for k,_ in pairs(keys) do
+all_keys = {}
+
+for k, _ in pairs(keys) do
+   table.insert(all_keys, k)
+end
+
+table.sort(all_keys)
+
+for _,k in pairs(all_keys) do
    print(k)
 end

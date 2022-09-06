@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     sol::state lua;
     gErrorIgnoreLevel = kFatal;
     lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table,
-                       sol::lib::io,sol::lib::debug);
+                       sol::lib::io,sol::lib::debug, sol::lib::os);
     bindPlotters(lua);
     bindData(lua);
     bindPalettes(lua);
@@ -40,6 +40,7 @@ int main(int argc, char* argv[]) {
     CLI::Option* f_opt = app.add_option("file", config_file_name,
                                         "Path to the configuration file");
     pal_opt->excludes(f_opt);
+    ext_opt->needs(f_opt);
     CLI11_PARSE(app, argc, argv);
 
     #ifdef SOL_ALL_SAFETIES_ON
@@ -53,6 +54,7 @@ int main(int argc, char* argv[]) {
 
     if (extract_keys) {
         lua.script("function plot(...) end");
+        lua.script("function execute_deferred_plots(...) end");
     }
     try {
         lua.script_file(config_file_name);
@@ -67,3 +69,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
