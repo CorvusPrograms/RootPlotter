@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <fmt/format.h>
 
 #include "glob.hpp"
 #include "plot_element.h"
@@ -57,21 +58,26 @@ struct SourceSet {
     SourceSet(const std::vector<DataSource *> dsv) : sources{dsv} {
         initKeys();
     }
-    std::string to_string();
+    static std::shared_ptr<SourceSet> create(
+        const std::vector<DataSource *> dsv);
+    //std::string to_string();
     std::unordered_set<std::string> getKeys() const;
     void initKeys();
 };
 
 struct InputData {
-    SourceSet *source_set = nullptr;
+    std::shared_ptr<SourceSet> source_set;
     bool normalize = false;
     float norm_to = 1.0f;
     bool stack = false;
     std::optional<std::pair<float, float>> yrange = std::nullopt,
                                            xrange = std::nullopt;
+
     InputData() = default;
-    InputData(SourceSet *s) : source_set{s} {}
-    InputData(SourceSet *s, bool n, float nt, bool st)
+    InputData(std::shared_ptr<SourceSet> s) : source_set{s}{}
+    
+
+    InputData(std::shared_ptr<SourceSet> s, bool n, float nt, bool st)
         : source_set{s}, normalize{n}, norm_to{nt}, stack{st} {}
 };
 

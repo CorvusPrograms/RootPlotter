@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     sol::state lua;
     gErrorIgnoreLevel = kFatal;
     lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table,
-                       sol::lib::io);
+                       sol::lib::io,sol::lib::debug);
     bindPlotters(lua);
     bindData(lua);
     bindPalettes(lua);
@@ -42,6 +42,10 @@ int main(int argc, char* argv[]) {
     pal_opt->excludes(f_opt);
     CLI11_PARSE(app, argc, argv);
 
+    #ifdef SOL_ALL_SAFETIES_ON
+    fmt::print("All lua safeties are on\n");
+    #endif
+
     if (just_palettes) {
         lua.script_file(APP_INSTALL_DATAROOTDIR "/list_pals.lua");
         std::exit(0);
@@ -52,6 +56,7 @@ int main(int argc, char* argv[]) {
     }
     try {
         lua.script_file(config_file_name);
+        lua.script("execute_deferred_plots()");
     } catch (std::exception& e) {
         fmt::print("ENCOUNTERED EXCEPTION\n{}", e.what());
     }

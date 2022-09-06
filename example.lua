@@ -7,8 +7,8 @@ rpv6 = DataSource.create(base .. "2018_RPV2W_mS-650_mB-0.root"):name("RPV 650"):
 tt = DataSource.create(base .. "2018_TT.root"):name("t#bar{t}"):palette_idx(500)
 qcd = DataSource.create(base .. "2018_QCD.root"):name("QCD"):palette_idx(600)
 
-sig = SourceSet.new({rpv4,rpv6,rpv8})
-bkg = SourceSet.new({tt,qcd})
+sig = SourceSet.create({rpv4,rpv6,rpv8})
+bkg = SourceSet.create({tt,qcd})
 
 my_palette = palettes.RainBow
 

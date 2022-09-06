@@ -93,7 +93,6 @@ function datamc_ratio(args)
       plotpad.m_bot(bot, 0.25)
       plotpad.m_top(bot, 0)
       plotpad.m_right(bot, 0.05)
-
       final=finalize_input_data(v.inputs)
       for i=2,#final do
          ratio_plot(bot, final[i], final[1],
@@ -123,5 +122,30 @@ function plot(args)
       name = captures.HISTNAME
       save_name = options.outdir ..  captures.HISTNAME .. ".pdf"
       plotpad.save(v[2], save_name)
+   end
+end
+
+
+NEED_TO_PLOT = {}
+
+function plot(args)
+   table.insert(NEED_TO_PLOT, args)
+end
+
+function execute_deferred_plots()
+   print(string.format("Executing %d plots", #NEED_TO_PLOT))
+   for _ , args in ipairs(NEED_TO_PLOT) do
+      local fun=args[1]
+      table.remove(args, 1)
+      ret = fun(args)
+      for k , v in ipairs(ret) do
+         captures = v[1]
+         io.write("                                               \r")
+         io.write(string.format("Plotting name %s\r", captures.HISTNAME))
+         io.flush()
+         name = captures.HISTNAME
+         save_name = options.outdir ..  captures.HISTNAME .. ".pdf"
+         plotpad.save(v[2], save_name)
+      end
    end
 end

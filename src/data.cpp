@@ -34,6 +34,12 @@ DataSource *DataSource::create(const std::string &p) {
     return ret;
 }
 
+std::shared_ptr<SourceSet> SourceSet::create(
+    const std::vector<DataSource *> dsv) {
+    auto ptr = std::make_shared<SourceSet>(dsv);
+    return ptr;
+}
+
 TH1 *DataSource::getHist(const std::string &name) {
     assert(file != nullptr);
     TH1 *hist = static_cast<TH1 *>(file->Get(name.c_str()));
@@ -58,59 +64,55 @@ void DataSource::loadKeys() {
     }
 }
 
-std::string SourceSet::to_string() {
-    std::vector<std::string> temp;
-    for (const auto &ds : sources) {
-        temp.push_back(ds->path);
-    }
-    return fmt::format("SourceSet({})", temp);
-}
+// std::string SourceSet::to_string() {
+//     std::vector<std::string> temp;
+//     for (const auto &ds : sources) {
+//         temp.push_back(ds->path);
+//     }
+//     return fmt::format("SourceSet({})", temp);
+// }
 
 void bindData(sol::state &lua) {
-    // clang-format off
     lua["all_data_sources"] = &data_sources;
     lua["finalize_input_data"] =
         sol::overload(finalizeManyInputData, finalizeInputData);
     lua["expand_data"] = expand;
 
     auto data_source_type = lua.new_usertype<DataSource>(
-        "DataSource",
-        "create", sol::factories(&DataSource::create),
-        BUILD(DataSource, name),
-        BUILD(DataSource, path),
-        BUILD(DataSource, tags),
-        BUILD(DataSource, keys),
+        "DataSource", "create", sol::factories(&DataSource::create),
+        BUILD(DataSource, name), BUILD(DataSource, path),
+        BUILD(DataSource, tags), BUILD(DataSource, keys),
         BUILD(DataSource, palette_idx));
-        //     "name", sol::as_function(&DataSource::name),
+    //     "name", sol::as_function(&DataSource::name),
 
     auto source_set_type = lua.new_usertype<SourceSet>(
         "SourceSet",
-        sol::constructors<SourceSet(), SourceSet(std::vector<DataSource *>)>(),
-        BUILD(SourceSet, sources),
+        // sol::constructors<SourceSet(), SourceSet(std::vector<DataSource
+        // *>)>(),
+        "create", sol::factories(&SourceSet::create), BUILD(SourceSet, sources),
         "get_keys", &SourceSet::getKeys);
 
     auto input_data = lua.new_usertype<InputData>(
-        "InputData", sol::constructors<InputData(), InputData(SourceSet *),
-                          InputData(SourceSet *, bool, float, bool)>(),
-        BUILD(InputData, source_set),
-        BUILD(InputData, normalize),
-        BUILD(InputData, norm_to),
-        BUILD(InputData, yrange),
-        "xrange" , [](InputData *c, float x, float y) {     
-                  c->xrange = {x,y};
-                  return c;                                            
-              },                                                       
-        "yrange" , [](InputData *c, float x, float y) {     
-                  c->yrange = {x,y};
-                  return c;                                            
-              },                                                       
+        "InputData",
+        sol::constructors<InputData(), InputData(std::shared_ptr<SourceSet>),
+                          InputData(std::shared_ptr<SourceSet>, bool, float,
+                                    bool)>(),
+        BUILD(InputData, source_set), BUILD(InputData, normalize),
+        BUILD(InputData, norm_to), BUILD(InputData, yrange), "xrange",
+        [](InputData *c, float x, float y) {
+            c->xrange = {x, y};
+            return c;
+        },
+        "yrange",
+        [](InputData *c, float x, float y) {
+            c->yrange = {x, y};
+            return c;
+        },
         BUILD(InputData, stack));
 
     auto matched_type = lua.new_usertype<MatchedKey>(
-        "MatchedKey",
-        "inputs", sol::readonly(&MatchedKey::inputs),
-        "captures", sol::readonly(&MatchedKey::captures));
-    // clang-format on
+        "MatchedKey", "inputs", sol::readonly(&MatchedKey::inputs), "captures",
+        sol::readonly(&MatchedKey::captures));
 }
 
 std::vector<std::unique_ptr<PlotElement>> finalizeInputData(

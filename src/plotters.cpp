@@ -34,30 +34,34 @@ Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
         } else {
             pe->Draw("");
         }
-        if (opts.title) {
-            pe->setTitle(opts.title.value());
-        }
-        if (opts.xlabel) {
-            pe->getXAxis()->SetTitle(opts.xlabel->c_str());
-        }
-        if (opts.ylabel) {
-            pe->getYAxis()->SetTitle(opts.ylabel->c_str());
-        }
+        maybe_fun(opts.title, [&pe](auto &&s) { pe->setTitle(s); });
+        maybe_fun(opts.xlabel,
+                  [&pe](auto &&s) { pe->getXAxis()->SetTitle(s.c_str()); });
+        maybe_fun(opts.ylabel,
+                  [&pe](auto &&s) { pe->getYAxis()->SetTitle(s.c_str()); });
         setAxisProperties(pe->getXAxis(), pe->getYAxis());
-        if (opts.xrange) {
-            pe->getXAxis()->SetRangeUser(opts.xrange->first,
-                                         opts.xrange->second);
-        }
-        if (opts.yrange) {
-            pe->getYAxis()->SetRangeUser(opts.yrange->first,
-                                         opts.yrange->second);
-            pe->setMinRange(opts.yrange->first);
-            if (opts.yrange->first < opts.yrange->second) {
-                pe->setMaxRange(opts.yrange->second);
+
+        maybe_fun(opts.title, [&pe](auto &&s) { pe->setTitle(s); });
+
+        maybe_fun(opts.xrange, [&pe](auto &&s) {
+            pe->getXAxis()->SetRangeUser(s.first, s.second);
+        });
+        maybe_fun(
+            opts.yrange,
+            [&pe](auto &&s) {
+                pe->getYAxis()->SetRangeUser(s.first, s.second);
+                pe->setMinRange(s.first);
+                if (s.first < s.second) {
+                    pe->setMaxRange(s.second);
+                }
+            },
+            [&pe]() {
+                pe->setMinRange(
+                    std::max(pe->getMinRange() - 0.0001, 0.0000000001));
             }
-        } else {
-            pe->setMinRange(std::max(pe->getMinRange() - 0.0001, 0.0000000001));
-        }
+
+        );
+
         pe->addToLegend(legend);
         ++i;
     }

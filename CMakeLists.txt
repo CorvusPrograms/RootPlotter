@@ -82,6 +82,8 @@ target_include_directories(lua SYSTEM INTERFACE ${includeDir})
 
 
 
+add_compile_definitions(SOL_ALL_SAFETIES_ON SOL_PRINT_ERRORS)
+
 set(PLOTTER_INSTALL_DATADIR ${CMAKE_INSTALL_FULL_DATADIR}/rootplotter/scripts)
 configure_file(configure/install_info.h.in ${PROJECT_BINARY_DIR}/config/install_info.h)
 add_library(install_config INTERFACE)
