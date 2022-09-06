@@ -6,7 +6,7 @@
 #include <sol/sol.hpp>
 
 #include "TCanvas.h"
-#include "TGAxis.h"
+#include "TAxis.h"
 #include "TGraphAsymmErrors.h"
 #include "TLegend.h"
 #include "TPad.h"

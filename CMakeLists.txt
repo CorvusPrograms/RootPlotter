@@ -15,12 +15,8 @@ else()
   add_compile_options(-Wall -Wextra -pedantic -Wno-unused-variable -ftemplate-backtrace-limit=0)
   add_compile_options( $<$<CONFIG:RELEASE>:-O3>
     $<$<CONFIG:DEBUG>:-O0>
-    $<$<CONFIG:DEBUG>:-g>
-    $<$<CONFIG:DEBUG>:-fsanitize=address>
-   ) 
-  add_link_options(
-    $<$<CONFIG:DEBUG>:-fsanitize=address>
-    ) 
+    $<$<CONFIG:DEBUG>:-g>) 
+  add_link_options() 
 endif()
 
 FetchContent_Declare( fmt
@@ -80,6 +76,7 @@ file(COPY ${publicHeaderFiles} DESTINATION ${includeDir})
 target_link_libraries(lua PUBLIC ${CMAKE_DL_LIBS})
 target_include_directories(lua SYSTEM INTERFACE ${includeDir})
 
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
 
 add_compile_definitions(SOL_ALL_SAFETIES_ON SOL_PRINT_ERRORS)

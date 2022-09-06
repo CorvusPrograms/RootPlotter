@@ -1,5 +1,5 @@
-base = "/export/scratch/Research/rpvsusy/data/08_15_2022_FixedBackground/"
 base = "../RPVResearch/data/08_15_2022_FixedBackground/"
+base = "/export/scratch/Research/rpvsusy/data/08_15_2022_FixedBackground/"
 
 rpv4 = DataSource.create(base .. "2018_RPV2W_mS-450_mB-0.root"):name("RPV 450"):palette_idx(100)
 rpv8 = DataSource.create(base .. "2018_RPV2W_mS-850_mB-0.root"):name("RPV 850"):palette_idx(200)
