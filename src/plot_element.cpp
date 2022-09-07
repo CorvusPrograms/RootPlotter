@@ -94,7 +94,7 @@ void Histogram::setLineAtt(TAttLine *line_att) {
     if (style.line_style) {
         line_att->SetLineStyle(style.line_style.value());
     }
-    if (style.marker_size) {
+    if (style.line_width) {
         line_att->SetLineWidth(style.line_width.value());
     }
 }

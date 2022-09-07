@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
                        sol::lib::io, sol::lib::debug, sol::lib::os);
     bindPlotters(lua);
     bindData(lua);
-    bindPalettes(lua);
+    bindGraphicalData(lua);
     lua.script_file(APP_INSTALL_DATAROOTDIR "/base.lua");
 
     CLI::App app{

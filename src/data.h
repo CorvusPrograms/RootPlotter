@@ -28,12 +28,13 @@ struct Style {
     StyleMode mode = StyleMode::marker;
 
     using StyleId_t = int;
-    std::optional<int> palette_idx;
-    std::optional<StyleId_t> marker_style;
-    std::optional<float> marker_size;
-    std::optional<StyleId_t> line_style;
-    std::optional<float> line_width;
-    std::optional<StyleId_t> fill_style;
+    std::optional<int> palette_idx = std::nullopt;
+    std::optional<int> color = std::nullopt;
+    std::optional<StyleId_t> marker_style= std::nullopt;
+    std::optional<float> marker_size= std::nullopt;
+    std::optional<StyleId_t> line_style= std::nullopt;
+    std::optional<int> line_width= std::nullopt;
+    std::optional<StyleId_t> fill_style= std::nullopt;
 };
 
 struct DataSource {
@@ -128,4 +129,11 @@ namespace {
 class state;
 }
 void bindPlotters(sol::state &lua);
+
+void bindMarkerStyles(sol::state& lua);
+void bindLineStyles(sol::state& lua);
+void bindFillStyles(sol::state& lua);
 void bindPalettes(sol::state &lua);
+
+void bindGraphicalData(sol::state &lua);
+
