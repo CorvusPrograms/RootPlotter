@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
     std::string config_file_name;
     bool just_palettes = false;
     bool extract_keys = false;
+    bool extract_totals = false;
 
     CLI::Option *pal_opt =
         app.add_flag("-P,--print-palettes", just_palettes,
@@ -37,11 +38,15 @@ int main(int argc, char *argv[]) {
     CLI::Option *ext_opt = app.add_flag(
         "-E,--extract-keys", extract_keys,
         "Extract the keys for a given configuration file, then exit.");
+    CLI::Option *tot_opt = app.add_flag(
+        "-T,--extract-totals", extract_totals,
+        "Extract the totals for a given configuration file, then exit.");
 
     CLI::Option *f_opt = app.add_option("file", config_file_name,
                                         "Path to the configuration file");
     pal_opt->excludes(f_opt);
     ext_opt->needs(f_opt);
+    tot_opt->needs(f_opt);
     CLI11_PARSE(app, argc, argv);
 
 #ifdef SOL_ALL_SAFETIES_ON
@@ -57,6 +62,11 @@ int main(int argc, char *argv[]) {
         lua.script("function plot(...) end");
         lua.script("function execute_deferred_plots(...) end");
     }
+    if (extract_totals) {
+        lua.script("function execute_deferred_plots(...) end");
+        lua.script_file(APP_INSTALL_DATAROOTDIR "/get_totals.lua");
+    }
+
     try {
         lua.script_file(config_file_name);
         lua.script("execute_deferred_plots()");
@@ -64,6 +74,7 @@ int main(int argc, char *argv[]) {
     catch (std::exception &e) {
         fmt::print("ENCOUNTERED EXCEPTION\n{}", e.what());
     }
+
     if (extract_keys) {
         lua.script_file(APP_INSTALL_DATAROOTDIR "/extract_keys.lua");
         std::exit(0);

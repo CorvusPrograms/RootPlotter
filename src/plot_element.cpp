@@ -12,6 +12,11 @@ Histogram::Histogram(DataSource *s, TH1 *h) : source{s}, hist{h} {}
 void Histogram::addToLegend(TLegend *legend) {
     legend->AddEntry(hist, source->name.c_str());
 }
+
+std::string Histogram::getSourceID() const{
+    return source->name;
+}
+
 void Histogram::setupRanges() {
     auto xr = getRangeX();
     auto yr = getRangeY();
@@ -21,6 +26,9 @@ void Histogram::setupRanges() {
     if (yr) {
         getYAxis()->SetRange(yr->first, yr->second);
     }
+}
+std::string Histogram::getName() const {
+    return hist->GetName();
 }
 void Histogram::setMinRange(float v) { hist->SetMinimum(v); }
 void Histogram::setMaxRange(float v) { hist->SetMaximum(v); }
@@ -118,6 +126,11 @@ void Stack::Draw(const std::string &s) {
     }
     hist->Draw((s + " hist").c_str());
 }
+
+std::string Stack::getName() const {
+    return hist->GetName();
+}
+
 std::string Stack::to_string() const { return sources[0]->name; }
 float Stack::getMinDomain() {
     auto xaxis = getXAxis();
@@ -130,3 +143,11 @@ float Stack::getMaxDomain() {
 
 float Stack::getMinRange() const { return hist->GetMinimum(); }
 float Stack::getMaxRange() const { return hist->GetMaximum(); }
+
+std::string Stack::getSourceID() const {
+    std::string ret= "Total()";
+    for(const auto& s : sources){
+        ret += s->name + ",";
+    }
+    return ret;
+}

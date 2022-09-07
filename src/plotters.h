@@ -15,6 +15,7 @@ Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
                 const PlotOptions &opts);
 
 Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den, PlotOptions &opts);
+void printTotals(std::vector<std::unique_ptr<PlotElement>> &data, bool entries);
 
 Pad *newPlot(int w, int h);
 Pad *newPlot();
