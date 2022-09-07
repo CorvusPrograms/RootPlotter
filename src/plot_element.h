@@ -51,7 +51,7 @@ struct PlotElement {
         return yrange;
     }
     virtual std::string getName() const = 0;
-    virtual std::string getSourceID() const = 0 ;
+    virtual std::string getSourceID() const = 0;
 
     //   virtual void setXLabel(const std::string &s) { xlabel = s; }
     //   virtual std::string setXLabel(const std::string &s) const { return
@@ -66,7 +66,7 @@ struct Histogram : public PlotElement {
     DataSource *source;
     TH1 *hist;
     Histogram(DataSource *s, TH1 *h);
-    virtual std::string getSourceID() const;
+    std::string getSourceID() const;
     virtual void addToLegend(TLegend *legend);
     virtual void setupRanges();
     virtual TH1 *getHistogram();

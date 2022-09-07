@@ -78,12 +78,29 @@ void bindData(sol::state &lua) {
         sol::overload(finalizeManyInputData, finalizeInputData);
     lua["expand_data"] = expand;
 
+    auto style_type = lua.new_usertype<Style>(
+        "Style", BUILD(Style, mode), BUILD(Style, palette_idx),
+        BUILD(Style, marker_style), BUILD(Style, marker_size),
+        BUILD(Style, line_width), BUILD(Style, line_style),
+        BUILD(Style, fill_style));
+
+    auto faststyle = [&style_type](DataSource &ds, sol::table s) {
+        for (auto pair : s) {
+            style_type[pair.first](ds.style, pair.second);
+        }
+        return ds;
+    };
+
     auto data_source_type = lua.new_usertype<DataSource>(
         "DataSource", "create", sol::factories(&DataSource::create),
         BUILD(DataSource, name), BUILD(DataSource, path),
-        BUILD(DataSource, tags), BUILD(DataSource, keys),
-        BUILD(DataSource, palette_idx));
-    //     "name", sol::as_function(&DataSource::name),
+        BUILD(DataSource, tags), BUILD(DataSource, keys), "style", faststyle);
+
+    auto plot_styles_type = lua.new_enum<Style::StyleMode>(
+        "plot_mode", {{"none", Style::StyleMode::none},
+                      {"line", Style::StyleMode::line},
+                      {"marker", Style::StyleMode::marker},
+                      {"fill", Style::StyleMode::fill}});
 
     auto source_set_type = lua.new_usertype<SourceSet>(
         "SourceSet",
@@ -94,20 +111,19 @@ void bindData(sol::state &lua) {
 
     auto input_data = lua.new_usertype<InputData>(
         "InputData",
-        sol::constructors<InputData(), InputData(std::shared_ptr<SourceSet>),
-                          InputData(std::shared_ptr<SourceSet>, bool, float,
-                                    bool)>(),
+        sol::constructors<
+            InputData(), InputData(std::shared_ptr<SourceSet>),
+            InputData(std::shared_ptr<SourceSet>, bool, float, bool)>(),
         BUILD(InputData, source_set), BUILD(InputData, normalize),
         BUILD(InputData, norm_to), BUILD(InputData, yrange), "xrange",
         [](InputData *c, float x, float y) {
             c->xrange = {x, y};
             return c;
         },
-        "yrange",
-        [](InputData *c, float x, float y) {
-            c->yrange = {x, y};
-            return c;
-        },
+        "yrange", [](InputData *c, float x, float y) {
+                      c->yrange = {x, y};
+                      return c;
+                  },
         BUILD(InputData, stack));
 
     auto matched_type = lua.new_usertype<MatchedKey>(
@@ -166,7 +182,7 @@ std::vector<MatchedKey> expand(std::vector<InputData> in,
                                const std::string &pattern) {
     std::unordered_set<std::string> keys = in[0].source_set->getKeys();
     for (std::size_t i = 1; i < in.size(); ++i) {
-        for (const auto &k : in[i].source_set->getKeys()) {
+        for (const auto &k : in [i].source_set->getKeys()) {
             if (keys.count(k) == 0) {
                 keys.erase(k);
             }

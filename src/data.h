@@ -17,12 +17,31 @@ struct PlotElement;
 struct Histogram;
 struct Stack;
 
+struct Style {
+    enum StyleMode {
+        none = 0,
+        line = 1 << 0,
+        marker = 1 << 1,
+        fill = 1 << 2,
+    };
+
+    StyleMode mode = StyleMode::marker;
+
+    using StyleId_t = int;
+    std::optional<int> palette_idx;
+    std::optional<StyleId_t> marker_style;
+    std::optional<float> marker_size;
+    std::optional<StyleId_t> line_style;
+    std::optional<float> line_width;
+    std::optional<StyleId_t> fill_style;
+};
+
 struct DataSource {
     std::unordered_set<std::string> tags;
     std::unordered_set<std::string> keys;
     std::string path;
     std::string name;
-    int palette_idx;
+    Style style;
     TFile *file = nullptr;
     static DataSource *create(const std::string &p);
 
@@ -38,8 +57,9 @@ struct DataSource {
         name = n;
         return *this;
     }
+
     DataSource &setPal(int p) {
-        palette_idx = p;
+        style.palette_idx = p;
         return *this;
     }
 
@@ -60,7 +80,7 @@ struct SourceSet {
     }
     static std::shared_ptr<SourceSet> create(
         const std::vector<DataSource *> dsv);
-    //std::string to_string();
+    // std::string to_string();
     std::unordered_set<std::string> getKeys() const;
     void initKeys();
 };
@@ -74,8 +94,7 @@ struct InputData {
                                            xrange = std::nullopt;
 
     InputData() = default;
-    InputData(std::shared_ptr<SourceSet> s) : source_set{s}{}
-    
+    InputData(std::shared_ptr<SourceSet> s) : source_set{s} {}
 
     InputData(std::shared_ptr<SourceSet> s, bool n, float nt, bool st)
         : source_set{s}, normalize{n}, norm_to{nt}, stack{st} {}

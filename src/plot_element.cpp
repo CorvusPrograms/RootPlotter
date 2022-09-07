@@ -13,9 +13,7 @@ void Histogram::addToLegend(TLegend *legend) {
     legend->AddEntry(hist, source->name.c_str());
 }
 
-std::string Histogram::getSourceID() const{
-    return source->name;
-}
+std::string Histogram::getSourceID() const { return source->name; }
 
 void Histogram::setupRanges() {
     auto xr = getRangeX();
@@ -27,9 +25,7 @@ void Histogram::setupRanges() {
         getYAxis()->SetRange(yr->first, yr->second);
     }
 }
-std::string Histogram::getName() const {
-    return hist->GetName();
-}
+std::string Histogram::getName() const { return hist->GetName(); }
 void Histogram::setMinRange(float v) { hist->SetMinimum(v); }
 void Histogram::setMaxRange(float v) { hist->SetMaximum(v); }
 float Histogram::getMinRange() const { return hist->GetMinimum(); }
@@ -61,16 +57,46 @@ float Histogram::getMaxDomain() {
 std::string Histogram::to_string() const { return source->name; }
 
 void Histogram::setFillAtt(TAttFill *fill_att) {
-    int pidx = source->palette_idx;
-    fill_att->SetFillColor(gStyle->GetColorPalette(pidx));
+    auto &style = source->style;
+    if (source->style.palette_idx) {
+        if (style.palette_idx) {
+            auto color = gStyle->GetColorPalette(style.palette_idx.value());
+            fill_att->SetFillColor(color);
+        }
+        if (style.fill_style) {
+            fill_att->SetFillStyle(style.fill_style.value());
+        }
+    }
 }
 void Histogram::setMarkAtt(TAttMarker *mark_att) {
-    int pidx = source->palette_idx;
-    mark_att->SetMarkerColor(gStyle->GetColorPalette(pidx));
+    auto &style = source->style;
+    if (source->style.palette_idx) {
+        if (style.palette_idx) {
+            auto color = gStyle->GetColorPalette(style.palette_idx.value());
+            mark_att->SetMarkerColor(color);
+        }
+    }
+    if (style.marker_style) {
+        mark_att->SetMarkerStyle(style.marker_style.value());
+    }
+    if (style.marker_size) {
+        mark_att->SetMarkerSize(style.marker_size.value());
+    }
 }
 void Histogram::setLineAtt(TAttLine *line_att) {
-    int pidx = source->palette_idx;
-    line_att->SetLineColor(gStyle->GetColorPalette(pidx));
+    auto &style = source->style;
+    if (source->style.palette_idx) {
+        if (style.palette_idx) {
+            auto color = gStyle->GetColorPalette(style.palette_idx.value());
+            line_att->SetLineColor(color);
+        }
+    }
+    if (style.line_style) {
+        line_att->SetLineStyle(style.line_style.value());
+    }
+    if (style.marker_size) {
+        line_att->SetLineWidth(style.line_width.value());
+    }
 }
 
 void bindPlotElements(sol::state &lua) {}
@@ -118,18 +144,18 @@ void Stack::Draw(const std::string &s) {
     int i = 0;
     for (TObject *th : *hist->GetHists()) {
         auto h = static_cast<TH1 *>(th);
-        auto pidx = sources[i]->palette_idx;
-        h->SetFillColor(gStyle->GetColorPalette(pidx));
-        h->SetMarkerColor(gStyle->GetColorPalette(pidx));
-        h->SetLineColor(gStyle->GetColorPalette(pidx));
+        if (sources[i]->style.palette_idx) {
+            auto pidx = sources[i]->style.palette_idx.value();
+            h->SetFillColor(gStyle->GetColorPalette(pidx));
+            h->SetMarkerColor(gStyle->GetColorPalette(pidx));
+            h->SetLineColor(gStyle->GetColorPalette(pidx));
+        }
         ++i;
     }
     hist->Draw((s + " hist").c_str());
 }
 
-std::string Stack::getName() const {
-    return hist->GetName();
-}
+std::string Stack::getName() const { return hist->GetName(); }
 
 std::string Stack::to_string() const { return sources[0]->name; }
 float Stack::getMinDomain() {
@@ -145,8 +171,8 @@ float Stack::getMinRange() const { return hist->GetMinimum(); }
 float Stack::getMaxRange() const { return hist->GetMaximum(); }
 
 std::string Stack::getSourceID() const {
-    std::string ret= "Total()";
-    for(const auto& s : sources){
+    std::string ret = "Total()";
+    for (const auto &s : sources) {
         ret += s->name + ",";
     }
     return ret;
