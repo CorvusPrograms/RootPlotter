@@ -120,7 +120,7 @@ function plot(args)
    for k , v in ipairs(ret) do
       captures = v[1]
       name = captures.HISTNAME
-      save_name = options.outdir ..  captures.HISTNAME .. ".pdf"
+      save_name = args.outdir ..  captures.HISTNAME .. ".pdf"
       plotpad.save(v[2], save_name)
    end
 end
@@ -147,7 +147,7 @@ function execute_deferred_plots()
          io.write(string.format("Plot [%d:%d/%d], currently plotting histogram %s\r", total, i , #NEED_TO_PLOT, captures.HISTNAME))
          io.flush()
          name = captures.HISTNAME
-         save_name = options.outdir ..  captures.HISTNAME .. ".pdf"
+         save_name = args.outdir ..  captures.HISTNAME .. ".pdf"
          plotpad.save(v[2], save_name)
       end
    end
