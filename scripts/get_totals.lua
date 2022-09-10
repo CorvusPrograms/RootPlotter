@@ -21,3 +21,4 @@ function plot(args)
   table.remove(args, 1)
   extract_totals(args)
 end
+

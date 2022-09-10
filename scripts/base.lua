@@ -1,3 +1,13 @@
+function cutflow(hist_name, cuts, data)
+   ret = {}
+   for k,v in ipairs(cuts) do
+      hist = r_get_hist(data, hist_name .. v)
+      ret[v] = r_total_hist_entries(hist)
+   end
+   return ret
+end
+
+
 function namegroup(match)
    match_idx={}
    idx = 1
@@ -55,7 +65,7 @@ function simple_plot(args)
          {v.captures,
           simple(pad,
                  finalize_input_data(v.inputs),
-                 create_options(args.opts))})
+                 create_options(args.opts or {}))})
    end
    return ret
 end
@@ -97,7 +107,7 @@ function datamc_ratio(args)
       for i=2,#final do
          ratio_plot(bot, final[i], final[1],
                     create_options(
-                       overwrite_table(args.opts,
+                       overwrite_table(args.opts or {},
                                        {
                                           title="", ylabel="Data/MC", yrange={0,1.5}}))
          )

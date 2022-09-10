@@ -62,9 +62,13 @@ struct DataSource : virtual SourceSet {
     TFile *file = nullptr;
 
     DataSource(const std::string &p, const std::string &n) : DataSource(p) {
+        fmt::print("Constructing using name at {}\n",
+                   fmt::ptr(this) );
         name = n;
     }
     DataSource(const std::string &p) : path{p} {
+        fmt::print("Constructing using name at {}\n",
+                   fmt::ptr(this) );
         load();
         loadKeys();
     }
@@ -80,7 +84,21 @@ struct DataSource : virtual SourceSet {
     void load();
     void loadKeys();
     TH1 *getHist(const std::string &name);
-    virtual ~DataSource() = default;
+
+    //   std::string to_string(){
+    //       return fmt::format("Datasource at {}\n", fmt::ptr(this));
+    //   }
+
+    //   DataSource &operator=(const DataSource &ds) {
+    //       fmt::print("Copy constructing data source at {} from {}\n ",
+    //                  fmt::ptr(this), fmt::ptr(&ds));
+    //       return *this;
+    //   }
+    //   DataSource(const DataSource &ds) {
+    //       fmt::print("Copy constructing data source at {} from {}\n ",
+    //                  fmt::ptr(this), fmt::ptr(&ds));
+    //   }
+    virtual ~DataSource() {}
 };
 
 struct InputData {

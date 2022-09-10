@@ -70,35 +70,35 @@ int main(int argc, char *argv[]) {
     fmt::print("All lua safeties are on\n");
 #endif
 
-    try {
-        if (just_palettes) {
-            lua.script_file(APP_INSTALL_DATAROOTDIR "/list_pals.lua");
-            std::exit(0);
-        }
-        if (!cli_script.empty()) {
-            lua.script(cli_script);
-        }
-
-        if (extract_keys) {
-            lua.script("function plot(...) end");
-            lua.script("function execute_deferred_plots(...) end");
-        }
-        if (extract_totals) {
-            lua.script("function execute_deferred_plots(...) end");
-            lua.script_file(APP_INSTALL_DATAROOTDIR "/get_totals.lua");
-        }
-
-        lua.script_file(config_file_name);
-        lua.script("execute_deferred_plots()");
-
-        if (extract_keys) {
-            lua.script_file(APP_INSTALL_DATAROOTDIR "/extract_keys.lua");
-            std::exit(0);
-        }
+    // try {
+    if (just_palettes) {
+        lua.script_file(APP_INSTALL_DATAROOTDIR "/list_pals.lua");
+        std::exit(0);
+    }
+    if (!cli_script.empty()) {
+        lua.script(cli_script);
     }
 
-    catch (std::exception &e) {
-        fmt::print("ENCOUNTERED EXCEPTION\n{}", e.what());
+    if (extract_keys) {
+        lua.script("function plot(...) end");
+        lua.script("function execute_deferred_plots(...) end");
     }
+    if (extract_totals) {
+        lua.script("function execute_deferred_plots(...) end");
+        lua.script_file(APP_INSTALL_DATAROOTDIR "/get_totals.lua");
+    }
+
+    lua.script_file(config_file_name);
+    lua.script("execute_deferred_plots()");
+
+    if (extract_keys) {
+        lua.script_file(APP_INSTALL_DATAROOTDIR "/extract_keys.lua");
+        std::exit(0);
+    }
+    // }
+
+    // catch (std::exception &e) {
+    //     fmt::print("ENCOUNTERED EXCEPTION\n{}", e.what());
+    // }
     return 0;
 }

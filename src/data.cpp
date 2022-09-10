@@ -83,7 +83,16 @@ void bindData(sol::state &lua) {
     auto data_source_type = lua.new_usertype<DataSource>(
         "DataSource", sol::constructors<DataSource(const std::string &)>(),
         BUILD(DataSource, name), BUILD(DataSource, path),
-        BUILD(DataSource, tags), BUILD(DataSource, keys), "style", faststyle,
+        BUILD(DataSource, tags),
+        BUILD(DataSource, file),
+        BUILD(DataSource, keys),
+        //"keys", &DataSource::keys,
+        //  sol::meta_function::garbage_collect,
+        //  sol::destructor( [](DataSource* ds){
+        //      fmt::print("Calling garbage collection on {}\n", ds->to_string());
+        // } ),
+
+        "style", faststyle,
         sol::base_classes, sol::bases<SourceSet>());
 
     auto plot_styles_type = lua.new_enum<Style::StyleMode>(
