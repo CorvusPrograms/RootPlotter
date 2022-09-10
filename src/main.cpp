@@ -75,8 +75,9 @@ int main(int argc, char *argv[]) {
     verbosity = v_flag;
     lua["VERBOSITY"] = verbosity;
     if (verbosity > 3) {
-        fmt::print("Verbosity level must be between 0 and 3, you specified {}\n",
-                   verbosity);
+        fmt::print(
+            "Verbosity level must be between 0 and 3, you specified {}\n",
+            verbosity);
         std::exit(1);
     }
     if (verbosity > 0) {
@@ -89,7 +90,6 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    // try {
     if (just_palettes) {
         lua.script_file(APP_INSTALL_DATAROOTDIR "/list_pals.lua");
         std::exit(0);
@@ -114,10 +114,5 @@ int main(int argc, char *argv[]) {
         lua.script_file(APP_INSTALL_DATAROOTDIR "/extract_keys.lua");
         std::exit(0);
     }
-    // }
-
-    // catch (std::exception &e) {
-    //     fmt::print("ENCOUNTERED EXCEPTION\n{}", e.what());
-    // }
     return 0;
 }
