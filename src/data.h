@@ -62,13 +62,9 @@ struct DataSource : virtual SourceSet {
     TFile *file = nullptr;
 
     DataSource(const std::string &p, const std::string &n) : DataSource(p) {
-        fmt::print("Constructing using name at {}\n",
-                   fmt::ptr(this) );
         name = n;
     }
     DataSource(const std::string &p) : path{p} {
-        fmt::print("Constructing using name at {}\n",
-                   fmt::ptr(this) );
         load();
         loadKeys();
     }
