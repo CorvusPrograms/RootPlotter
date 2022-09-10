@@ -11,7 +11,7 @@
 #include "install_info.h"
 #include "plot_element.h"
 #include "plotters.h"
-
+#include "verbosity.h"
 
 int main(int argc, char *argv[]) {
     // TH1::AddDirectory(kFALSE);
@@ -53,6 +53,11 @@ int main(int argc, char *argv[]) {
         "-T,--extract-totals", extract_totals,
         "Extract the totals for a given configuration file, then exit.");
 
+    int v_flag = 0;
+    app.add_flag(
+        "-v", v_flag,
+        "Verbosity. Set flag between 0 and 3 times to indicate level.");
+
     std::string cli_script;
 
     CLI::Option *script_opt =
@@ -66,6 +71,9 @@ int main(int argc, char *argv[]) {
     ext_opt->needs(f_opt);
     tot_opt->needs(f_opt);
     CLI11_PARSE(app, argc, argv);
+
+    verbosity = v_flag;
+    lua["VERBOSITY"] = verbosity;
 
 #ifdef SOL_ALL_SAFETIES_ON
     fmt::print("All lua safeties are on\n");

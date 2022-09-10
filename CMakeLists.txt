@@ -88,7 +88,7 @@ configure_file(configure/install_info.h.in ${PROJECT_BINARY_DIR}/config/install_
 add_library(install_config INTERFACE)
 target_include_directories(install_config INTERFACE ${PROJECT_BINARY_DIR}/config)
 
-add_executable(plotter src/plotters.cpp src/data.cpp src/main.cpp src/plot_element.cpp)
+add_executable(plotter src/plotters.cpp src/data.cpp src/main.cpp src/plot_element.cpp src/verbosity.cpp)
 target_include_directories(plotter PUBLIC ${CMAKE_BINARY_DIR}/generated)
 
 target_link_libraries(plotter PUBLIC
