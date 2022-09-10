@@ -1,9 +1,8 @@
-
-function MD(...)
-   return InputData:new(...)
-end
+require "cutflow"
+require "util"
 
 function simple_plot(args)
+   VLOG(2, "Running simple plot with args %s", tprint(args))
    local pattern = args[1]
    local data = args[2]
    x = expand_data(data, args[1])
@@ -21,6 +20,7 @@ function simple_plot(args)
 end
 
 function ratio(args)
+   VLOG(2, "Running ratio plot with args %s", tprint(args))
    local pattern = args[1]
    local data = args[2]
    x = expand_data(data,  pattern)
@@ -34,6 +34,7 @@ function ratio(args)
 end
 
 function datamc_ratio(args)
+   VLOG(2, "Running datamc_ratio plot with args %s", tprint(args))
    local pattern = args[1]
    local data = args[2]
    x = expand_data(data, pattern)
@@ -57,9 +58,11 @@ function datamc_ratio(args)
       for i=2,#final do
          ratio_plot(bot, final[i], final[1],
                     create_options(
-                       overwrite_table(args.opts or {},
-                                       {
-                                          title="", ylabel="Data/MC", yrange={0,1.5}}))
+                       overwrite_table(
+                          args.opts or {},
+                          {title="",
+                           ylabel="Data/MC",
+                           yrange={0,1.5}}))
          )
       end
       simple(top, final,  create_options(overwrite_table(args.opts, {xlabel=nil})))
@@ -93,6 +96,7 @@ function plot(args)
 end
 
 function execute_deferred_plots()
+   VLOG(1, "Starting execution of deferred plots")
    total = 0
    start_time = os.time()
    print(string.format("Executing %d plot groups.", #NEED_TO_PLOT))
@@ -103,17 +107,22 @@ function execute_deferred_plots()
       for k , v in ipairs(ret) do
          total = total + 1
          captures = v[1]
-         io.write("                                                                            \r")
-         io.write(string.format("Plot [%d:%d/%d], currently plotting histogram %s\r", total, i , #NEED_TO_PLOT, captures.HISTNAME))
-         io.flush()
-         name = captures.HISTNAME
-         save_name = args.outdir ..  captures.HISTNAME .. ".pdf"
-         plotpad.save(v[2], save_name)
+         if VERBOSITY < 2 then
+            io.write("                                                                            \r")
+         end
+         io.write(string.format("Plot [%d:%d/%d], currently plotting histogram %s%s", total, i , #NEED_TO_PLOT, captures.HISTNAME,  VERBOSITY <2 and '\r' or '\n'))
+                  if VERBOSITY < 2 then
+                     io.flush()
+                  end
+                  name = captures.HISTNAME
+                  save_name = args.outdir ..  captures.HISTNAME .. ".pdf"
+                  plotpad.save(v[2], save_name)
       end
    end
-   io.write("                                                                            \r")
+   if VERBOSITY < 2 then
+      io.write("                                                                            \r")
+   end
    io.write(string.format("Generated %d plots in %d seconds.\n", total, os.time() - start_time))
 end
 
 
-require "cutflow"

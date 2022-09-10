@@ -37,3 +37,10 @@ function overwrite_table(t1,t2)
    end
    return newtable
 end
+
+
+function VLOG(level, ...)
+   if VERBOSITY >= level then
+      io.stderr:write(string.format(...), "\n")
+   end
+end

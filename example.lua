@@ -1,4 +1,3 @@
-print("HERE")
 base = "/export/scratch/Research/rpvsusy/data/08_15_2022_FixedBackground/"
 base = "../RPVResearch/data/08_15_2022_FixedBackground/"
 
@@ -41,10 +40,10 @@ for k,v in pairs(toplot) do
            ,opts={xlabel=v[2], ylabel="Events", title=v[2], palette=my_palette, xrange = v[3], yrange={0,0}, logy=false},
            outdir=string.format("plots/%sstack/", add)
       }
-   --   plot{simple_plot, v[1] .. "_*Lep", {InputData:new(rpv4):normalize(true), InputData:new(qcd):normalize(true)},
-   --        opts={xlabel=v[2], ylabel="Events", title=v[2], palette=my_palette, xrange = v[3]},
-   --        outdir=string.format("plots/%stest/", add)
-   --   }
+      plot{simple_plot, v[1] .. "_*Lep", {InputData:new(rpv4):normalize(true), InputData:new(qcd):normalize(true)},
+           opts={xlabel=v[2], ylabel="Events", title=v[2], palette=my_palette, xrange = v[3]},
+           outdir=string.format("plots/%stest/", add)
+      }
    end
 end
 

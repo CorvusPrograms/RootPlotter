@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     sol::state lua;
     lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table,
                        sol::lib::io, sol::lib::debug, sol::lib::os,
-                       sol::lib::package);
+                       sol::lib::package, sol::lib::math);
     sol::optional<std::string> lua_path = lua["package"]["path"];
     std::string new_path;
     if (lua_path) {
@@ -74,9 +74,19 @@ int main(int argc, char *argv[]) {
 
     verbosity = v_flag;
     lua["VERBOSITY"] = verbosity;
+    if (verbosity > 3) {
+        fmt::print("Verbosity level must be between 0 and 3, you specified {}\n",
+                   verbosity);
+        std::exit(1);
+    }
+    if (verbosity > 0) {
+        fmt::print("Running at verbosity level {}\n", verbosity);
+    }
 
 #ifdef SOL_ALL_SAFETIES_ON
-    fmt::print("All lua safeties are on\n");
+    if (verbosity > VerbosityLevel::Low) {
+        fmt::print("All lua safeties are on\n");
+    }
 #endif
 
     // try {
