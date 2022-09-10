@@ -48,12 +48,10 @@ end
 --    end
 -- end
 
-function combine_to_table(...)
-   for k,v in ipairs(arg) do
-      print(k ,v)
-    end
-end
+
 
 x= cutflow("EventCounter_", {"0Lep", "0Lep_HT>700_GenWPt<200"}, rpv4)
-combine_to_table(x,x,x)
+y= cutflow("EventCounter_", {"0Lep", "0Lep_HT>700_GenWPt<200"}, rpv6)
+t =combine_to_table(x,y)
+print_table_as_table(t)
 

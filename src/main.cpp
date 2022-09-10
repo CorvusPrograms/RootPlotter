@@ -12,22 +12,23 @@
 #include "plot_element.h"
 #include "plotters.h"
 
-inline void my_panic(sol::optional<std::string> maybe_msg) {
-    std::cerr << "Lua is in a panic state and will now abort() the application"
-              << std::endl;
-    if (maybe_msg) {
-        const std::string &msg = maybe_msg.value();
-        std::cerr << "\terror message: " << msg << std::endl;
-    }
-    // When this function exits, Lua will exhibit default behavior and abort()
-}
 
 int main(int argc, char *argv[]) {
     // TH1::AddDirectory(kFALSE);
-    sol::state lua(sol::c_call<decltype(&my_panic), &my_panic>);
-    gErrorIgnoreLevel = kFatal;
+    sol::state lua;
     lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table,
-                       sol::lib::io, sol::lib::debug, sol::lib::os);
+                       sol::lib::io, sol::lib::debug, sol::lib::os,
+                       sol::lib::package);
+    sol::optional<std::string> lua_path = lua["package"]["path"];
+    std::string new_path;
+    if (lua_path) {
+        new_path = lua_path.value() + ";" APP_INSTALL_DATAROOTDIR "/?.lua";
+    } else {
+        new_path = APP_INSTALL_DATAROOTDIR "/?.lua";
+    }
+    lua["package"]["path"] = new_path;
+
+    gErrorIgnoreLevel = kFatal;
     bindPlotters(lua);
     bindData(lua);
     bindGraphicalData(lua);

@@ -1,13 +1,3 @@
-function cutflow(hist_name, cuts, data)
-   ret = {}
-   for k,v in ipairs(cuts) do
-      hist = r_get_hist(data, hist_name .. v)
-      ret[v] = r_total_hist_entries(hist)
-   end
-   return ret
-end
-
-
 function namegroup(match)
    match_idx={}
    idx = 1
@@ -164,3 +154,6 @@ function execute_deferred_plots()
    io.write("                                                                            \r")
    io.write(string.format("Generated %d plots in %d seconds.\n", total, os.time() - start_time))
 end
+
+
+require "cutflow"
