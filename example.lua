@@ -53,5 +53,6 @@ end
 x= cutflow("EventCounter_", {"0Lep", "0Lep_HT>700_GenWPt<200"}, rpv4)
 y= cutflow("EventCounter_", {"0Lep", "0Lep_HT>700_GenWPt<200"}, rpv6)
 t =combine_to_table(x,y)
-print_table_as_table(t)
+print_cols_as_rows(t)
+
 
