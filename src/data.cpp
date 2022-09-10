@@ -25,21 +25,6 @@ void SourceSet::initKeys() {
     common_keys = std::move(ret);
 }
 
-static std::vector<std::unique_ptr<DataSource>> data_sources;
-
-DataSource *DataSource::create(const std::string &p) {
-    auto up = std::make_unique<DataSource>(p);
-    DataSource *ret = up.get();
-    data_sources.push_back(std::move(up));
-    return ret;
-}
-
-std::shared_ptr<SourceSet> SourceSet::create(
-    const std::vector<DataSource *> dsv) {
-    auto ptr = std::make_shared<SourceSet>(dsv);
-    return ptr;
-}
-
 TH1 *DataSource::getHist(const std::string &name) {
     assert(file != nullptr);
     TH1 *hist = static_cast<TH1 *>(file->Get(name.c_str()));
@@ -72,8 +57,12 @@ void DataSource::loadKeys() {
 //     return fmt::format("SourceSet({})", temp);
 // }
 
+std::vector<DataSource *> SourceSet::getSources() { return sources; }
+std::vector<DataSource *> DataSource::getSources() { return {this}; }
+
+std::unordered_set<std::string> DataSource::getKeys() const { return keys; }
+
 void bindData(sol::state &lua) {
-    lua["all_data_sources"] = &data_sources;
     lua["finalize_input_data"] =
         sol::overload(finalizeManyInputData, finalizeInputData);
     lua["expand_data"] = expand;
@@ -92,9 +81,10 @@ void bindData(sol::state &lua) {
     };
 
     auto data_source_type = lua.new_usertype<DataSource>(
-        "DataSource", "create", sol::factories(&DataSource::create),
+        "DataSource", sol::constructors<DataSource(const std::string &)>(),
         BUILD(DataSource, name), BUILD(DataSource, path),
-        BUILD(DataSource, tags), BUILD(DataSource, keys), "style", faststyle);
+        BUILD(DataSource, tags), BUILD(DataSource, keys), "style", faststyle,
+        sol::base_classes, sol::bases<SourceSet>());
 
     auto plot_styles_type = lua.new_enum<Style::StyleMode>(
         "plot_mode", {{"none", Style::StyleMode::none},
@@ -104,31 +94,37 @@ void bindData(sol::state &lua) {
 
     auto source_set_type = lua.new_usertype<SourceSet>(
         "SourceSet",
-        // sol::constructors<SourceSet(), SourceSet(std::vector<DataSource
-        // *>)>(),
-        "create", sol::factories(&SourceSet::create), BUILD(SourceSet, sources),
-        "get_keys", &SourceSet::getKeys);
+        sol::constructors<SourceSet(const std::vector<DataSource *>)>(),
+        BUILD(SourceSet, sources), "get_keys", &SourceSet::getKeys);
 
     auto input_data = lua.new_usertype<InputData>(
-        "InputData",
-        sol::constructors<
-            InputData(), InputData(std::shared_ptr<SourceSet>),
-            InputData(std::shared_ptr<SourceSet>, bool, float, bool)>(),
+        "InputData", sol::constructors<InputData(), InputData(SourceSet *)>(),
         BUILD(InputData, source_set), BUILD(InputData, normalize),
         BUILD(InputData, norm_to), BUILD(InputData, yrange), "xrange",
         [](InputData *c, float x, float y) {
             c->xrange = {x, y};
             return c;
         },
-        "yrange", [](InputData *c, float x, float y) {
-                      c->yrange = {x, y};
-                      return c;
-                  },
+        "yrange",
+        [](InputData *c, float x, float y) {
+            c->yrange = {x, y};
+            return c;
+        },
         BUILD(InputData, stack));
 
     auto matched_type = lua.new_usertype<MatchedKey>(
         "MatchedKey", "inputs", sol::readonly(&MatchedKey::inputs), "captures",
         sol::readonly(&MatchedKey::captures));
+
+    lua["r_get_hist"] = [](DataSource *ds, const std::string &name) {
+        TH1 *ret;
+        ds->file->GetObject(name.c_str(), ret);
+        return ret;
+    };
+
+    lua["r_total_hist_entries"] = [](TH1* hist) {
+        return hist->GetEntries();
+    };
 }
 
 std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
@@ -138,7 +134,7 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
     std::vector<std::unique_ptr<PlotElement>> ret;
     std::vector<DataSource *> sources;
     auto stack = new THStack();
-    for (DataSource *source : input.data.source_set->sources) {
+    for (DataSource *source : input.data.source_set->getSources()) {
         TH1 *hist = source->getHist(input.name);
         if (!hist) {
             throw std::runtime_error(fmt::format(
@@ -182,7 +178,7 @@ std::vector<MatchedKey> expand(std::vector<InputData> in,
                                const std::string &pattern) {
     std::unordered_set<std::string> keys = in[0].source_set->getKeys();
     for (std::size_t i = 1; i < in.size(); ++i) {
-        for (const auto &k : in [i].source_set->getKeys()) {
+        for (const auto &k : in[i].source_set->getKeys()) {
             if (keys.count(k) == 0) {
                 keys.erase(k);
             }

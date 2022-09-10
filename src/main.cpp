@@ -12,9 +12,19 @@
 #include "plot_element.h"
 #include "plotters.h"
 
+inline void my_panic(sol::optional<std::string> maybe_msg) {
+    std::cerr << "Lua is in a panic state and will now abort() the application"
+              << std::endl;
+    if (maybe_msg) {
+        const std::string &msg = maybe_msg.value();
+        std::cerr << "\terror message: " << msg << std::endl;
+    }
+    // When this function exits, Lua will exhibit default behavior and abort()
+}
+
 int main(int argc, char *argv[]) {
     // TH1::AddDirectory(kFALSE);
-    sol::state lua;
+    sol::state lua(sol::c_call<decltype(&my_panic), &my_panic>);
     gErrorIgnoreLevel = kFatal;
     lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table,
                        sol::lib::io, sol::lib::debug, sol::lib::os);
@@ -42,6 +52,13 @@ int main(int argc, char *argv[]) {
         "-T,--extract-totals", extract_totals,
         "Extract the totals for a given configuration file, then exit.");
 
+    std::string cli_script;
+
+    CLI::Option *script_opt =
+        app.add_option("-e,--execute", cli_script,
+                       "Lua script to execute, after loading the the base "
+                       "files but before loading any user config files.");
+
     CLI::Option *f_opt = app.add_option("file", config_file_name,
                                         "Path to the configuration file");
     pal_opt->excludes(f_opt);
@@ -53,31 +70,35 @@ int main(int argc, char *argv[]) {
     fmt::print("All lua safeties are on\n");
 #endif
 
-    if (just_palettes) {
-        lua.script_file(APP_INSTALL_DATAROOTDIR "/list_pals.lua");
-        std::exit(0);
-    }
-
-    if (extract_keys) {
-        lua.script("function plot(...) end");
-        lua.script("function execute_deferred_plots(...) end");
-    }
-    if (extract_totals) {
-        lua.script("function execute_deferred_plots(...) end");
-        lua.script_file(APP_INSTALL_DATAROOTDIR "/get_totals.lua");
-    }
-
     try {
+        if (just_palettes) {
+            lua.script_file(APP_INSTALL_DATAROOTDIR "/list_pals.lua");
+            std::exit(0);
+        }
+        if (!cli_script.empty()) {
+            lua.script(cli_script);
+        }
+
+        if (extract_keys) {
+            lua.script("function plot(...) end");
+            lua.script("function execute_deferred_plots(...) end");
+        }
+        if (extract_totals) {
+            lua.script("function execute_deferred_plots(...) end");
+            lua.script_file(APP_INSTALL_DATAROOTDIR "/get_totals.lua");
+        }
+
         lua.script_file(config_file_name);
         lua.script("execute_deferred_plots()");
-    }
-    catch (std::exception &e) {
-        fmt::print("ENCOUNTERED EXCEPTION\n{}", e.what());
+
+        if (extract_keys) {
+            lua.script_file(APP_INSTALL_DATAROOTDIR "/extract_keys.lua");
+            std::exit(0);
+        }
     }
 
-    if (extract_keys) {
-        lua.script_file(APP_INSTALL_DATAROOTDIR "/extract_keys.lua");
-        std::exit(0);
+    catch (std::exception &e) {
+        fmt::print("ENCOUNTERED EXCEPTION\n{}", e.what());
     }
     return 0;
 }

@@ -1,12 +1,12 @@
 #pragma once
 
 #include <THStack.h>
+#include <fmt/format.h>
 
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <fmt/format.h>
 
 #include "glob.hpp"
 #include "plot_element.h"
@@ -30,21 +30,36 @@ struct Style {
     using StyleId_t = int;
     std::optional<int> palette_idx = std::nullopt;
     std::optional<int> color = std::nullopt;
-    std::optional<StyleId_t> marker_style= std::nullopt;
-    std::optional<float> marker_size= std::nullopt;
-    std::optional<StyleId_t> line_style= std::nullopt;
-    std::optional<int> line_width= std::nullopt;
-    std::optional<StyleId_t> fill_style= std::nullopt;
+    std::optional<StyleId_t> marker_style = std::nullopt;
+    std::optional<float> marker_size = std::nullopt;
+    std::optional<StyleId_t> line_style = std::nullopt;
+    std::optional<int> line_width = std::nullopt;
+    std::optional<StyleId_t> fill_style = std::nullopt;
 };
 
-struct DataSource {
+struct DataSource;
+
+struct SourceSet {
+    std::vector<DataSource *> sources;
+    std::unordered_set<std::string> common_keys;
+    SourceSet() = default;
+    SourceSet(const std::vector<DataSource *> dsv) : sources{dsv} {
+        initKeys();
+    }
+    // std::string to_string();
+    virtual std::unordered_set<std::string> getKeys() const;
+    virtual std::vector<DataSource *> getSources();
+    virtual ~SourceSet() = default;
+    void initKeys();
+};
+
+struct DataSource : virtual SourceSet {
     std::unordered_set<std::string> tags;
     std::unordered_set<std::string> keys;
     std::string path;
     std::string name;
     Style style;
     TFile *file = nullptr;
-    static DataSource *create(const std::string &p);
 
     DataSource(const std::string &p, const std::string &n) : DataSource(p) {
         name = n;
@@ -59,35 +74,17 @@ struct DataSource {
         return *this;
     }
 
-    DataSource &setPal(int p) {
-        style.palette_idx = p;
-        return *this;
-    }
+    virtual std::unordered_set<std::string> getKeys() const;
+    virtual std::vector<DataSource *> getSources();
 
-    //    std::string to_string() {
-    //        return fmt::format("DataSource({}, {},{})", name, path, tags);
-    //    }
     void load();
     void loadKeys();
     TH1 *getHist(const std::string &name);
-};
-
-struct SourceSet {
-    std::vector<DataSource *> sources;
-    std::unordered_set<std::string> common_keys;
-    SourceSet() = default;
-    SourceSet(const std::vector<DataSource *> dsv) : sources{dsv} {
-        initKeys();
-    }
-    static std::shared_ptr<SourceSet> create(
-        const std::vector<DataSource *> dsv);
-    // std::string to_string();
-    std::unordered_set<std::string> getKeys() const;
-    void initKeys();
+    virtual ~DataSource() = default;
 };
 
 struct InputData {
-    std::shared_ptr<SourceSet> source_set;
+    SourceSet *source_set;
     bool normalize = false;
     float norm_to = 1.0f;
     bool stack = false;
@@ -95,10 +92,7 @@ struct InputData {
                                            xrange = std::nullopt;
 
     InputData() = default;
-    InputData(std::shared_ptr<SourceSet> s) : source_set{s} {}
-
-    InputData(std::shared_ptr<SourceSet> s, bool n, float nt, bool st)
-        : source_set{s}, normalize{n}, norm_to{nt}, stack{st} {}
+    InputData(SourceSet *s) : source_set{s} {}
 };
 
 struct PlotterInput {
@@ -130,10 +124,9 @@ class state;
 }
 void bindPlotters(sol::state &lua);
 
-void bindMarkerStyles(sol::state& lua);
-void bindLineStyles(sol::state& lua);
-void bindFillStyles(sol::state& lua);
+void bindMarkerStyles(sol::state &lua);
+void bindLineStyles(sol::state &lua);
+void bindFillStyles(sol::state &lua);
 void bindPalettes(sol::state &lua);
 
 void bindGraphicalData(sol::state &lua);
-
