@@ -2,11 +2,6 @@ keys = {}
 sources={}
 all_data_sources = {}
 
-print(all_data_sources)
-print("=======================STARTING EXTRACTION")
-collectgarbage()
-print("=======================DONE COLLECTING GARBAGE")
-
 for _,v in pairs(_G) do
    if type(v) == "userdata" then
       if (getmetatable(v) or {}).__name == "sol.DataSource" then
@@ -16,13 +11,10 @@ for _,v in pairs(_G) do
 end
 
 
-print(#all_data_sources)
 
 for k,v in ipairs(all_data_sources) do
    print(v:name())
 end
-print(rpv4:keys())
-
 
 for k,v in ipairs(all_data_sources) do
    print(v:name())

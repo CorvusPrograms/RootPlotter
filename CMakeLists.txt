@@ -72,6 +72,14 @@ else()
   target_include_directories(lua SYSTEM  INTERFACE ${LUA_INCLUDE_DIR})
 endif()
 
+#FetchContent_Declare (
+#tracy
+#GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+#GIT_TAG master
+#GIT_SHALLOW TRUE
+#GIT_PROGRESS TRUE
+#)
+#FetchContent_MakeAvailable ( tracy )
 
 
 #set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
@@ -97,6 +105,7 @@ target_link_libraries(plotter PUBLIC
   lua
   CLI11::CLI11
   install_config
+#  TracyClient
   )
 
 
