@@ -149,13 +149,15 @@ void bindPlotters(sol::state &lua) {
     lua["make_pad"] =
         sol::overload<Pad *(), Pad * (int, int)>(newPlot, newPlot);
     lua["plotpad"] = lua.create_table();
-    lua["plotpad"]["save"] = [](Pad *p, const std::string &s) {
-        std::filesystem::path path(s);
+    lua["plotpad"]["save"] = [&lua](Pad *p, const std::string &s) {
+        std::string outbasepath = lua["OUTPUT_BASE_PATH"];
+        std::filesystem::path path(outbasepath);
+        path /= s;
         std::filesystem::path parent = path.parent_path();
         if (!std::filesystem::is_directory(parent)) {
             std::filesystem::create_directories(parent);
         }
-        p->SaveAs(s.c_str());
+        p->SaveAs(path.string().c_str());
     };
     lua["plotpad"]["divide"] = [](Pad *p, int i, int j) { p->Divide(i, j); };
     lua["plotpad"]["divide"] = &TVirtualPad::Divide;

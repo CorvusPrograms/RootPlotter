@@ -1,14 +1,11 @@
-base = "/export/scratch/Research/rpvsusy/data/08_15_2022_FixedBackground/"
 base = "../RPVResearch/data/08_15_2022_FixedBackground/"
+base = "/export/scratch/Research/rpvsusy/data/08_15_2022_FixedBackground/"
 
-rpv4 = DataSource:new(base .. "2018_RPV2W_mS-450_mB-0.root"):name("RPV 450"):
-   style{
-      palette_idx=200, marker_style=2, marker_size=1, fill_style=0, line_style=line_style.solid
-   }
-rpv8 = DataSource.new(base .. "2018_RPV2W_mS-850_mB-0.root"):name("RPV 850")--:palette_idx(200)
-rpv6 = DataSource.new(base .. "2018_RPV2W_mS-650_mB-0.root"):name("RPV 650")--:palette_idx(300)
-tt = DataSource.new(base .. "2018_TT.root"):name("t#bar{t}")--:palette_idx(500)
-qcd = DataSource.new(base .. "2018_QCD.root"):name("QCD")--:palette_idx(600)
+rpv4 = DataSource:new(base .. "2018_RPV2W_mS-450_mB-0.root"):name("RPV 450"):style{palette_idx=100}
+rpv8 = DataSource.new(base .. "2018_RPV2W_mS-850_mB-0.root"):name("RPV 850"):style{palette_idx=200}
+rpv6 = DataSource.new(base .. "2018_RPV2W_mS-650_mB-0.root"):name("RPV 650"):style{palette_idx=300}
+tt = DataSource.new(base .. "2018_TT.root"):name("t#bar{t}"):style{palette_idx=400}
+qcd = DataSource.new(base .. "2018_QCD.root"):name("QCD"):style{palette_idx=500, mode=plot_mode.fill}
 
 sig = SourceSet.new({rpv4,rpv6,rpv8})
 bkg = SourceSet.new({tt,qcd})

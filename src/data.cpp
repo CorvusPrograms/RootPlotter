@@ -95,11 +95,11 @@ void bindData(sol::state &lua) {
         "style", faststyle,
         sol::base_classes, sol::bases<SourceSet>());
 
-    auto plot_styles_type = lua.new_enum<Style::StyleMode>(
-        "plot_mode", {{"none", Style::StyleMode::none},
-                      {"line", Style::StyleMode::line},
-                      {"marker", Style::StyleMode::marker},
-                      {"fill", Style::StyleMode::fill}});
+    auto plot_styles_type = lua.new_enum<Style::Mode>(
+        "plot_mode", {{"none", Style::Mode::None},
+                      {"line", Style::Mode::Line},
+                      {"marker", Style::Mode::Marker},
+                      {"fill", Style::Mode::Fill}});
 
     auto source_set_type = lua.new_usertype<SourceSet>(
         "SourceSet",

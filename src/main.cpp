@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
         fmt::format("Root plotter interface\nRootPlotter version {}.{}",
                     PLOTTER_VERSION_MAJOR, PLOTTER_VERSION_MINOR)};
     std::string config_file_name;
+    std::string output_base_path;
     bool just_palettes = false;
     bool extract_keys = false;
     bool extract_totals = false;
@@ -67,6 +68,9 @@ int main(int argc, char *argv[]) {
 
     CLI::Option *f_opt = app.add_option("file", config_file_name,
                                         "Path to the configuration file");
+    CLI::Option *out_opt = app.add_option(
+        "-o,--output", output_base_path,
+        "Base output directory. Overwrites value in config value.");
     pal_opt->excludes(f_opt);
     ext_opt->needs(f_opt);
     tot_opt->needs(f_opt);
@@ -80,8 +84,16 @@ int main(int argc, char *argv[]) {
             verbosity);
         std::exit(1);
     }
-    if (verbosity > 0) {
+    if (verbosity > VerbosityLevel::None) {
         fmt::print("Running at verbosity level {}\n", verbosity);
+    }
+
+    if (output_base_path.empty()) {
+        output_base_path = "output";
+    }
+    lua["OUTPUT_BASE_PATH"] = output_base_path;
+    if (verbosity >= VerbosityLevel::Low) {
+        fmt::print("Ouput base path is {}\n", output_base_path);
     }
 
 #ifdef SOL_ALL_SAFETIES_ON

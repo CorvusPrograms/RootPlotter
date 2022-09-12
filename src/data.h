@@ -18,14 +18,14 @@ struct Histogram;
 struct Stack;
 
 struct Style {
-    enum StyleMode {
-        none = 0,
-        line = 1 << 0,
-        marker = 1 << 1,
-        fill = 1 << 2,
+    enum Mode {
+        None = 0,
+        Line = 1 << 0,
+        Marker = 1 << 1,
+        Fill = 1 << 2,
     };
 
-    StyleMode mode = StyleMode::marker;
+    Mode mode = Mode::Marker;
 
     using StyleId_t = int;
     std::optional<int> palette_idx = std::nullopt;

@@ -58,6 +58,9 @@ std::string Histogram::to_string() const { return source->name; }
 
 void Histogram::setFillAtt(TAttFill *fill_att) {
     auto &style = source->style;
+    if (!(style.mode & Style::Mode::Fill)) {
+        return;
+    }
     if (source->style.palette_idx) {
         if (style.palette_idx) {
             auto color = gStyle->GetColorPalette(style.palette_idx.value());
@@ -70,6 +73,9 @@ void Histogram::setFillAtt(TAttFill *fill_att) {
 }
 void Histogram::setMarkAtt(TAttMarker *mark_att) {
     auto &style = source->style;
+    if (!(style.mode | Style::Mode::Marker)) {
+        return;
+    }
     if (source->style.palette_idx) {
         if (style.palette_idx) {
             auto color = gStyle->GetColorPalette(style.palette_idx.value());
@@ -85,6 +91,9 @@ void Histogram::setMarkAtt(TAttMarker *mark_att) {
 }
 void Histogram::setLineAtt(TAttLine *line_att) {
     auto &style = source->style;
+    if (!(style.mode | Style::Mode::Line)) {
+        return;
+    }
     if (source->style.palette_idx) {
         if (style.palette_idx) {
             auto color = gStyle->GetColorPalette(style.palette_idx.value());
