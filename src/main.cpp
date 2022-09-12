@@ -105,6 +105,7 @@ int main(int argc, char *argv[]) {
     if (extract_totals) {
         lua.script("function execute_deferred_plots(...) end");
         lua.script_file(APP_INSTALL_DATAROOTDIR "/get_totals.lua");
+        std::exit(0);
     }
 
     lua.script_file(config_file_name);
