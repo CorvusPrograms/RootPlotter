@@ -8,6 +8,7 @@
 
 #include "TFile.h"
 #include "util.h"
+#include "verbosity.h"
 
 std::unordered_set<std::string> SourceSet::getKeys() const {
     return common_keys;
@@ -34,8 +35,7 @@ TH1 *DataSource::getHist(const std::string &name) {
 void DataSource::load() {
     file = TFile::Open((path).c_str());
     if (!file) {
-        fmt::print("Could not open file {}\n", path);
-        std::terminate();
+        vRuntimeError("Could not open file {}", path);
     }
 }
 
@@ -43,9 +43,9 @@ void DataSource::loadKeys() {
     for (const auto &key : *(file->GetListOfKeys())) {
         keys.insert(key->GetName());
     }
+    vPrintHigh("Extracted {} keys from file {}\n", std::size(keys), path);
     if (keys.empty()) {
-        fmt::print("File {} does not contain any keys", path);
-        std::terminate();
+        vRuntimeError("File {} does not contain any keys", path);
     }
 }
 
@@ -83,23 +83,22 @@ void bindData(sol::state &lua) {
     auto data_source_type = lua.new_usertype<DataSource>(
         "DataSource", sol::constructors<DataSource(const std::string &)>(),
         BUILD(DataSource, name), BUILD(DataSource, path),
-        BUILD(DataSource, tags),
-        BUILD(DataSource, file),
+        BUILD(DataSource, tags), BUILD(DataSource, file),
         BUILD(DataSource, keys),
         //"keys", &DataSource::keys,
         //  sol::meta_function::garbage_collect,
         //  sol::destructor( [](DataSource* ds){
-        //      fmt::print("Calling garbage collection on {}\n", ds->to_string());
+        //      fmt::print("Calling garbage collection on {}\n",
+        //      ds->to_string());
         // } ),
 
-        "style", faststyle,
-        sol::base_classes, sol::bases<SourceSet>());
+        "style", faststyle, sol::base_classes, sol::bases<SourceSet>());
 
-    auto plot_styles_type = lua.new_enum<Style::Mode>(
-        "plot_mode", {{"none", Style::Mode::None},
-                      {"line", Style::Mode::Line},
-                      {"marker", Style::Mode::Marker},
-                      {"fill", Style::Mode::Fill}});
+    auto plot_styles_type =
+        lua.new_enum<Style::Mode>("plot_mode", {{"none", Style::Mode::None},
+                                                {"line", Style::Mode::Line},
+                                                {"marker", Style::Mode::Marker},
+                                                {"fill", Style::Mode::Fill}});
 
     auto source_set_type = lua.new_usertype<SourceSet>(
         "SourceSet",
@@ -131,9 +130,7 @@ void bindData(sol::state &lua) {
         return ret;
     };
 
-    lua["r_total_hist_entries"] = [](TH1* hist) {
-        return hist->GetEntries();
-    };
+    lua["r_total_hist_entries"] = [](TH1 *hist) { return hist->GetEntries(); };
 }
 
 std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
@@ -146,9 +143,8 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
     for (DataSource *source : input.data.source_set->getSources()) {
         TH1 *hist = source->getHist(input.name);
         if (!hist) {
-            throw std::runtime_error(fmt::format(
-                "Could not get a histogram from file {} with name {}",
-                source->name, input.name));
+            vRuntimeError("Could not get a histogram from file {} with name {}",
+                          source->name, input.name);
         }
         if (input.data.normalize) {
             hist->Scale(input.data.norm_to / hist->Integral());
@@ -185,6 +181,7 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
 
 std::vector<MatchedKey> expand(std::vector<InputData> in,
                                const std::string &pattern) {
+    vPrintHigh("Expanding pattern {}\n", pattern);
     std::unordered_set<std::string> keys = in[0].source_set->getKeys();
     for (std::size_t i = 1; i < in.size(); ++i) {
         for (const auto &k : in[i].source_set->getKeys()) {
@@ -194,11 +191,15 @@ std::vector<MatchedKey> expand(std::vector<InputData> in,
         }
     }
     if (!glob::isGlob(pattern)) {
+        vPrintHigh(
+            "Pattern {} was not recognized as a glob, treating as "
+            "name\n", pattern);
         MatchedKey single;
         for (const auto &input : in) {
             single.inputs.push_back({pattern, input});
             single.captures["HISTNAME"] = pattern;
         }
+        vPrintHigh("Pattern expanded to 1 result\n");
         return {single};
     }
     std::vector<MatchedKey> ret;
@@ -212,10 +213,10 @@ std::vector<MatchedKey> expand(std::vector<InputData> in,
             ret.push_back(single);
         }
     }
+    vPrintHigh("Pattern expanded to {} results\n", std::size(ret));
     if (ret.empty()) {
-        throw std::runtime_error(fmt::format(
-            "Pattern '{}' does not match any key in the data sources",
-            pattern));
+        vRuntimeError("Pattern '{}' does not match any key in the data sources",
+                      pattern);
     }
     return ret;
 }

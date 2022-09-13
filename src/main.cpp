@@ -39,9 +39,11 @@ int main(int argc, char *argv[]) {
                     PLOTTER_VERSION_MAJOR, PLOTTER_VERSION_MINOR)};
     std::string config_file_name;
     std::string output_base_path;
+    std::string cli_script;
     bool just_palettes = false;
     bool extract_keys = false;
     bool extract_totals = false;
+    int v_flag = 0;
 
     CLI::Option *pal_opt =
         app.add_flag("-P,--print-palettes", just_palettes,
@@ -54,12 +56,9 @@ int main(int argc, char *argv[]) {
         "-T,--extract-totals", extract_totals,
         "Extract the totals for a given configuration file, then exit.");
 
-    int v_flag = 0;
     app.add_flag(
         "-v", v_flag,
         "Verbosity. Set flag between 0 and 3 times to indicate level.");
-
-    std::string cli_script;
 
     CLI::Option *script_opt =
         app.add_option("-e,--execute", cli_script,
@@ -84,17 +83,14 @@ int main(int argc, char *argv[]) {
             verbosity);
         std::exit(1);
     }
-    if (verbosity > VerbosityLevel::None) {
-        fmt::print("Running at verbosity level {}\n", verbosity);
-    }
+
+    vPrintLow("Running at verbosity level {}\n", verbosity);
 
     if (output_base_path.empty()) {
         output_base_path = "output";
     }
     lua["OUTPUT_BASE_PATH"] = output_base_path;
-    if (verbosity >= VerbosityLevel::Low) {
-        fmt::print("Ouput base path is {}\n", output_base_path);
-    }
+    vPrintLow("Ouput base path is {}\n", output_base_path);
 
 #ifdef SOL_ALL_SAFETIES_ON
     if (verbosity > VerbosityLevel::Low) {
@@ -111,18 +107,45 @@ int main(int argc, char *argv[]) {
     }
 
     if (extract_keys) {
+        vPrintLow("Running key extraction\n");
+        vPrintHigh("Setting plot and execute to empty functions\n");
         lua.script("function plot(...) end");
         lua.script("function execute_deferred_plots(...) end");
     }
     if (extract_totals) {
+        vPrintLow("Running total extraction\n");
+        vPrintHigh("Setting execute to empty function\n");
         lua.script("function execute_deferred_plots(...) end");
         lua.script_file(APP_INSTALL_DATAROOTDIR "/get_totals.lua");
-        std::exit(0);
     }
 
-    lua.script_file(config_file_name);
-    lua.script("execute_deferred_plots()");
+    auto result = lua.safe_script_file(config_file_name);
+    if (!result.valid()) {
+        sol::error err = result;
+        fmt::print(
+            "Caught exception during user script execution, please check the "
+            "validity of your script:\nException:\n{}\n",
+            err.what());
+        std::exit(1);
+    } else {
+        vPrintMedium("Successfully established configuration\n");
+    }
 
+    vPrintMedium("Executing deferred plots\n");
+
+    result = lua.safe_script("execute_deferred_plots()");
+
+    if (!result.valid()) {
+        sol::error err = result;
+        fmt::print(
+            "Caught exception during user plot execution. This likely means "
+            "that you passed invalid parameters to one of your 'plot' "
+            "calls\n:\nException:\n{}\n",
+            err.what());
+        std::exit(1);
+    } else {
+        vPrintMedium("Successfully executed deferred plots\n");
+    }
     if (extract_keys) {
         lua.script_file(APP_INSTALL_DATAROOTDIR "/extract_keys.lua");
         std::exit(0);
