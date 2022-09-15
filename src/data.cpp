@@ -141,7 +141,7 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
     std::vector<DataSource *> sources;
     auto stack = new THStack();
     for (DataSource *source : input.data.source_set->getSources()) {
-        TH1 *hist = source->getHist(input.name);
+        TH1 *hist = (TH1*)source->getHist(input.name)->Clone();
         if (!hist) {
             vRuntimeError("Could not get a histogram from file {} with name {}",
                           source->name, input.name);
@@ -150,9 +150,6 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
             hist->Scale(input.data.norm_to / hist->Integral());
         }
         if (input.data.stack) {
-            if (input.data.normalize) {
-                hist->Scale(input.data.norm_to / hist->Integral());
-            }
             stack->Add(hist);
             sources.push_back(source);
         } else {

@@ -12,8 +12,8 @@ struct underlying_optional<
     using type = typename T::value_type;
 };
 
-#define BUILD(C, var)                                                     \
-#var, sol::overload(                                                  \
+#define BUILD(C, var) \
+    #var, sol::overload(                                                  \
               [](sol::object c,                                           \
                  const underlying_optional <decltype(C::var)>::type &v) { \
                   c.as<C>().var = v;                                      \
