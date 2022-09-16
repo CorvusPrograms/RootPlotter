@@ -28,7 +28,7 @@ void SourceSet::initKeys() {
 
 TH1 *DataSource::getHist(const std::string &name) {
     assert(file != nullptr);
-    TH1 *hist = static_cast<TH1 *>(file->Get(name.c_str()));
+    TH1 *hist = (file->Get<TH1>(name.c_str()));
     return hist;
 };
 
@@ -58,7 +58,9 @@ void DataSource::loadKeys() {
 // }
 
 std::vector<DataSource *> SourceSet::getSources() { return sources; }
-std::vector<DataSource *> DataSource::getSources() { return {this}; }
+std::vector<DataSource *> DataSource::getSources() {
+    return {this};
+}
 
 std::unordered_set<std::string> DataSource::getKeys() const { return keys; }
 
@@ -91,7 +93,6 @@ void bindData(sol::state &lua) {
         //      fmt::print("Calling garbage collection on {}\n",
         //      ds->to_string());
         // } ),
-
         "style", faststyle, sol::base_classes, sol::bases<SourceSet>());
 
     auto plot_styles_type =
@@ -113,11 +114,10 @@ void bindData(sol::state &lua) {
             c->xrange = {x, y};
             return c;
         },
-        "yrange",
-        [](InputData *c, float x, float y) {
-            c->yrange = {x, y};
-            return c;
-        },
+        "yrange", [](InputData *c, float x, float y) {
+                      c->yrange = {x, y};
+                      return c;
+                  },
         BUILD(InputData, stack));
 
     auto matched_type = lua.new_usertype<MatchedKey>(
@@ -139,14 +139,19 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
 
     std::vector<std::unique_ptr<PlotElement>> ret;
     std::vector<DataSource *> sources;
+    static int i = 0;
     auto stack = new THStack();
     for (DataSource *source : input.data.source_set->getSources()) {
-        TH1 *hist = (TH1*)source->getHist(input.name)->Clone();
+        ++i;
+        TH1 *hist = (TH1 *)(source->getHist(input.name)
+                                ->Clone(std::to_string(i).c_str()));
+        // TH1 *hist = source->getHist(input.name);
         if (!hist) {
             vRuntimeError("Could not get a histogram from file {} with name {}",
                           source->name, input.name);
         }
         if (input.data.normalize) {
+
             hist->Scale(input.data.norm_to / hist->Integral());
         }
         if (input.data.stack) {
@@ -181,7 +186,7 @@ std::vector<MatchedKey> expand(std::vector<InputData> in,
     vPrintHigh("Expanding pattern {}\n", pattern);
     std::unordered_set<std::string> keys = in[0].source_set->getKeys();
     for (std::size_t i = 1; i < in.size(); ++i) {
-        for (const auto &k : in[i].source_set->getKeys()) {
+        for (const auto &k : in [i].source_set->getKeys()) {
             if (keys.count(k) == 0) {
                 keys.erase(k);
             }
@@ -190,7 +195,8 @@ std::vector<MatchedKey> expand(std::vector<InputData> in,
     if (!glob::isGlob(pattern)) {
         vPrintHigh(
             "Pattern {} was not recognized as a glob, treating as "
-            "name\n", pattern);
+            "name\n",
+            pattern);
         MatchedKey single;
         for (const auto &input : in) {
             single.inputs.push_back({pattern, input});
