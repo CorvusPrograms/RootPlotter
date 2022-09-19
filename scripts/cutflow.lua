@@ -1,10 +1,24 @@
 
 
-function cutflow(hist_name, cuts, data)
+function cutflow(hist_name, cuts, data, divide, separator)
+   separator = separator or "_"
    ret = { {"name", data:name()} }
+   local first = true
+   local first_value
+   local prev_name = hist_name
+   local next_name
    for k,v in ipairs(cuts) do
-      hist = r_get_hist(data, hist_name .. v)
-      table.insert(ret, { v , r_total_hist_entries(hist)})
+      next_name = prev_name .. ( v ~= "" and separator  or "" ) .. v
+      print(next_name)
+      hist = r_get_hist(data, next_name)
+      prev_name = next_name
+      val = r_total_hist_entries(hist)
+      first_value = first and val or first_value
+      if divide then
+         val = val / first_value
+      end
+      first = first and false
+      table.insert(ret, { v , val})
    end
    return ret
 end
