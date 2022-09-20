@@ -29,10 +29,10 @@ for k,v in pairs(toplot) do
    for _, n in pairs({true, false}) do
       indata =  {InputData:new(bkg):normalize(n):stack(true), InputData:new(sig):normalize(true)}
       add = n and "normed_" or ""
-      plot{datamc_ratio, v[1] .. "_*Lep",  indata,
-           opts={xlabel=v[2], ylabel="Events", title=v[2], palette=my_palette, xrange = v[3], yrange={1,0}, logy=false},
-           outdir = string.format("plots/%sratio/", add)
-      }
+ --     plot{datamc_ratio, v[1] .. "_*Lep",  indata,
+ --          opts={xlabel=v[2], ylabel="Events", title=v[2], palette=my_palette, xrange = v[3], yrange={1,0}, logy=false},
+ --          outdir = string.format("plots/%sratio/", add)
+ --     }
       plot{simple_plot, v[1] .. "_*Lep", indata
            ,opts={xlabel=v[2], ylabel="Events", title=v[2], palette=my_palette, xrange = v[3], yrange={0,0}, logy=false},
            outdir=string.format("plots/%sstack/", add)
@@ -46,9 +46,5 @@ end
 
 
 
-x= cutflow("EventCounter_", {"0Lep", "0Lep_HT>700_GenWPt<200"}, rpv4)
-y= cutflow("EventCounter_", {"0Lep", "0Lep_HT>700_GenWPt<200"}, rpv6)
-t =combine_to_table(x,y)
-print_cols_as_rows(t)
 
 

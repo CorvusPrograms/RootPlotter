@@ -8,8 +8,11 @@ struct DataSource;
 class TH1;
 class TVirtualPad;
 class TLegend;
+struct PlotElement;
 
-using Pad = TVirtualPad;
+// using Pad = TVirtualPad;
+
+using PlotElementCollection = std::vector<std::unique_ptr<PlotElement>>;
 
 struct PlotElement {
     std::optional<std::pair<float, float>> xrange = std::nullopt,
@@ -32,9 +35,9 @@ struct PlotElement {
     virtual float getMinRange() const = 0;
     virtual float getMaxRange() const = 0;
 
-    virtual void setFillAtt(TAttFill *) {};
-    virtual void setMarkAtt(TAttMarker *) {};
-    virtual void setLineAtt(TAttLine *) {};
+    virtual void setFillAtt(TAttFill *){};
+    virtual void setMarkAtt(TAttMarker *){};
+    virtual void setLineAtt(TAttLine *){};
     virtual void setTitle(const std::string &s) = 0;
     virtual void setupRanges() = 0;
 
@@ -64,8 +67,8 @@ struct PlotElement {
 
 struct Histogram : public PlotElement {
     DataSource *source;
-    TH1 *hist;
-    Histogram(DataSource *s, TH1 *h);
+    std::unique_ptr<TH1> hist;
+    Histogram(DataSource *s, std::unique_ptr<TH1> &&h);
     std::string getSourceID() const;
     virtual void addToLegend(TLegend *legend);
     virtual void setupRanges();
@@ -96,8 +99,10 @@ struct Histogram : public PlotElement {
 
 struct Stack : public PlotElement {
     std::vector<DataSource *> sources;
-    THStack *hist;
-    Stack(const std::vector<DataSource *> s, THStack *h);
+    std::unique_ptr<THStack> hist;
+    std::vector<std::unique_ptr<TH1>> histos;
+    Stack(const std::vector<DataSource *> s, std::unique_ptr<THStack> &&h,
+          std::vector<std::unique_ptr<TH1>> &&hs);
 
     virtual std::string getSourceID() const;
     virtual void addToLegend(TLegend *legend);

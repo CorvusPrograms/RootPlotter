@@ -10,7 +10,7 @@ function simple_plot(args)
    for k,v in ipairs(x) do
       elements, filled = finalize_input_data(v.inputs)
       if filled then
-         pad = make_pad()
+         pad = Pad:new()
          table.insert(
             ret,
             {v.captures,
@@ -91,7 +91,7 @@ function plot(args)
       captures = v[1]
       name = captures.HISTNAME
       save_name = args.outdir ..  captures.HISTNAME .. ".pdf"
-      plotpad.save(v[2], save_name)
+      v[2].save(BASE_OUTPUT_PATH .. "/" .. save_name)
    end
 end
 
@@ -123,7 +123,8 @@ function execute_deferred_plots()
          end
          name = captures.HISTNAME
          save_name = args.outdir ..  captures.HISTNAME .. ".pdf"
-         plotpad.save(v[2], save_name)
+         --   plotpad.save(v[2], save_name)
+         v[2]:save(OUTPUT_BASE_PATH .. "/" .. save_name)
       end
    end
    if VERBOSITY < 2 then

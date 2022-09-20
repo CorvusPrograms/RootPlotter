@@ -11,11 +11,13 @@
 #include "glob.hpp"
 #include "plot_element.h"
 
+
 class TFile;
 class TH1;
 struct PlotElement;
 struct Histogram;
 struct Stack;
+using PlotElementCollection = std::vector<std::unique_ptr<PlotElement>>;
 
 struct Style {
     enum Mode {
@@ -56,6 +58,7 @@ struct SourceSet {
 struct DataSource : virtual SourceSet {
     std::unordered_set<std::string> tags;
     std::unordered_set<std::string> keys;
+    std::unordered_map<std::string, TH1 *> cache;
     std::string path;
     std::string name;
     Style style;
@@ -79,7 +82,7 @@ struct DataSource : virtual SourceSet {
 
     void load();
     void loadKeys();
-    TH1 *getHist(const std::string &name);
+    std::unique_ptr<TH1> getHist(const std::string &name);
 
     //   std::string to_string(){
     //       return fmt::format("Datasource at {}\n", fmt::ptr(this));
@@ -127,10 +130,10 @@ void bindData(sol::state &lua);
 std::vector<MatchedKey> expand(std::vector<InputData> in,
                                const std::string &pattern);
 
-std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
-    const PlotterInput &input);
+std::pair<std::shared_ptr<PlotElementCollection>, bool>
+finalizeInputData(const PlotterInput &input);
 
-std::pair<std::vector<std::unique_ptr<PlotElement>>, bool>
+std::pair<std::shared_ptr<PlotElementCollection>, bool>
 finalizeManyInputData(const std::vector<PlotterInput> &input);
 
 namespace {

@@ -14,7 +14,7 @@
 #include "verbosity.h"
 
 int main(int argc, char *argv[]) {
-    // TH1::AddDirectory(kFALSE);
+    TH1::AddDirectory(kFALSE);
     sol::state lua;
     lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table,
                        sol::lib::io, sol::lib::debug, sol::lib::os,

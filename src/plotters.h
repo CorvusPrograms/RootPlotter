@@ -1,6 +1,23 @@
 #pragma once
 #include "plot_element.h"
 
+struct Pad {
+    std::unique_ptr<TVirtualPad> p;
+    std::vector<std::shared_ptr<PlotElementCollection>> drawn_elements;
+    TVirtualPad *get();
+    Pad();
+    void cd();
+    void cd_child(int i);
+    void setMarginTop(float f);
+    void setMarginBottom(float f);
+    void setMarginRight(float f);
+    void setMarginLeft(float f);
+    void divide(int i, int j);
+    void update();
+    void setRect(float f1, float f2, float f3, float f4);
+    void save(const std::string &s);
+};
+
 struct PlotOptions {
     using SOType = std::optional<std::string>;
     SOType title = std::nullopt, xlabel = std::nullopt, ylabel = std::nullopt;
@@ -11,10 +28,11 @@ struct PlotOptions {
     int palette = kRainBow;
 };
 
-Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
+Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> &data,
                 const PlotOptions &opts);
 
-Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den, PlotOptions &opts);
+Pad &ratioPlot(Pad &pad, std::shared_ptr<PlotElementCollection> &plots,
+               PlotOptions &opts);
 void printTotals(std::vector<std::unique_ptr<PlotElement>> &data, bool entries);
 
 Pad *newPlot(int w, int h);

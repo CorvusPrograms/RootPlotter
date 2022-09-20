@@ -8,9 +8,10 @@
 
 #include "util.h"
 
-Histogram::Histogram(DataSource *s, TH1 *h) : source{s}, hist{h} {}
+Histogram::Histogram(DataSource *s, std::unique_ptr<TH1> &&h)
+    : source{s}, hist{std::move(h)} {}
 void Histogram::addToLegend(TLegend *legend) {
-    legend->AddEntry(hist, source->name.c_str());
+    legend->AddEntry(hist.get(), source->name.c_str());
 }
 
 std::string Histogram::getSourceID() const { return source->name; }
@@ -30,16 +31,16 @@ void Histogram::setMinRange(float v) { hist->SetMinimum(v); }
 void Histogram::setMaxRange(float v) { hist->SetMaximum(v); }
 float Histogram::getMinRange() const { return hist->GetMinimum(); }
 float Histogram::getMaxRange() const { return hist->GetMaximum(); }
-TH1 *Histogram::getHistogram() { return hist; }
-TH1 *Histogram::getTotals() { return hist; }
+TH1 *Histogram::getHistogram() { return hist.get(); }
+TH1 *Histogram::getTotals() { return hist.get(); }
 float Histogram::getIntegral() { return hist->Integral(); }
 TAxis *Histogram::getXAxis() { return hist->GetXaxis(); }
 TAxis *Histogram::getYAxis() { return hist->GetYaxis(); }
 void Histogram::setTitle(const std::string &s) { hist->SetTitle(s.c_str()); }
 void Histogram::Draw(const std::string &s) {
-    setMarkAtt(hist);
-    setFillAtt(hist);
-    setLineAtt(hist);
+    setMarkAtt(hist.get());
+    setFillAtt(hist.get());
+    setLineAtt(hist.get());
     hist->Draw(s.c_str());
 }
 void Histogram::setFillStyle() {}
@@ -110,8 +111,9 @@ void Histogram::setLineAtt(TAttLine *line_att) {
 
 void bindPlotElements(sol::state &lua) {}
 
-Stack::Stack(const std::vector<DataSource *> s, THStack *h)
-    : sources{s}, hist{h} {}
+Stack::Stack(const std::vector<DataSource *> s, std::unique_ptr<THStack> &&h,
+             std::vector<std::unique_ptr<TH1>> &&hs)
+    : sources{s}, hist{std::move(h)}, histos{std::move(hs)} {}
 
 void Stack::addToLegend(TLegend *legend) {
     int i = 0;

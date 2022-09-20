@@ -26,10 +26,11 @@ void SourceSet::initKeys() {
     common_keys = std::move(ret);
 }
 
-TH1 *DataSource::getHist(const std::string &name) {
+std::unique_ptr<TH1> DataSource::getHist(const std::string &name) {
     assert(file != nullptr);
-    TH1 *hist = (file->Get<TH1>(name.c_str()));
-    return hist;
+    auto ret =
+        std::unique_ptr<TH1>((TH1 *)file->Get<TH1>(name.c_str())->Clone());
+    return ret;
 };
 
 void DataSource::load() {
@@ -132,7 +133,7 @@ void bindData(sol::state &lua) {
     lua["r_total_hist_entries"] = [](TH1 *hist) { return hist->GetEntries(); };
 }
 
-std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
+std::pair<std::shared_ptr<PlotElementCollection>, bool> finalizeInputData(
     const PlotterInput &input) {
     assert(input.data.source_set);
 
@@ -140,19 +141,20 @@ std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
     std::vector<DataSource *> sources;
     bool all_filled = true;
     static int i = 0;
-    auto stack = new THStack();
+    auto stack = std::make_unique<THStack>();
+    std::vector<std::unique_ptr<TH1>> stack_comps;
     auto insources = input.data.source_set->getSources();
 
     for (DataSource *source : insources) {
         ++i;
-        TH1 *hist = (TH1 *)(source->getHist(input.name)
-                                ->Clone(std::to_string(i).c_str()));
+        // TH1 *hist = (TH1 *)(source->getHist(input.name)
+        //                        ->Clone(std::to_string(i).c_str()));
+        std::unique_ptr<TH1> hist = source->getHist(input.name);
         if (input.data.stack) {
             all_filled = all_filled || (hist->GetEntries() > 0);
         } else {
             all_filled = all_filled && (hist->GetEntries() > 0);
         }
-        // TH1 *hist = source->getHist(input.name);
         if (!hist) {
             vRuntimeError("Could not get a histogram from file {} with name {}",
                           source->name, input.name);
@@ -161,10 +163,11 @@ std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
             hist->Scale(input.data.norm_to / hist->Integral());
         }
         if (input.data.stack) {
-            stack->Add(hist);
+            stack->Add(hist.get());
+            stack_comps.push_back(std::move(hist));
             sources.push_back(source);
         } else {
-            auto h = std::make_unique<Histogram>(source, hist);
+            auto h = std::make_unique<Histogram>(source, std::move(hist));
             if (input.data.xrange) {
                 h->setRangeX(input.data.xrange.value());
             }
@@ -175,7 +178,8 @@ std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
         }
     }
     if (input.data.stack) {
-        auto h = std::make_unique<Stack>(sources, stack);
+        auto h = std::make_unique<Stack>(sources, std::move(stack),
+                                         std::move(stack_comps));
         if (input.data.xrange) {
             h->setRangeX(input.data.xrange.value());
         }
@@ -184,20 +188,22 @@ std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
         }
         ret.push_back(std::move(h));
     }
-    return {std::move(ret), all_filled};
+    return {std::make_shared<PlotElementCollection>(std::move(ret)),
+            all_filled};
 }
 
-std::pair<std::vector<std::unique_ptr<PlotElement>>, bool>
-finalizeManyInputData(const std::vector<PlotterInput> &input) {
+std::pair<std::shared_ptr<PlotElementCollection>, bool> finalizeManyInputData(
+    const std::vector<PlotterInput> &input) {
     std::vector<std::unique_ptr<PlotElement>> ret;
     bool all_filled = true;
     for (const auto &d : input) {
         auto one_set = finalizeInputData(d);
-        std::move(one_set.first.begin(), one_set.first.end(),
+        std::move(one_set.first->begin(), one_set.first->end(),
                   std::back_inserter(ret));
         all_filled = all_filled && one_set.second;
     }
-    return {std::move(ret), all_filled};
+    return {std::make_shared<PlotElementCollection>(std::move(ret)),
+            all_filled};
 }
 
 std::vector<MatchedKey> expand(std::vector<InputData> in,

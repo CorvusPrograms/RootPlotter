@@ -5,29 +5,58 @@
 #include <filesystem>
 #include <sol/sol.hpp>
 
-#include "TCanvas.h"
 #include "TAxis.h"
+#include "TCanvas.h"
 #include "TGraphAsymmErrors.h"
 #include "TLegend.h"
 #include "TPad.h"
 #include "TStyle.h"
 #include "util.h"
+#include "verbosity.h"
 
-Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
+Pad::Pad() { p = std::shared_ptr<TVirtualPad>(new TCanvas()); }
+
+TVirtualPad *Pad::get() { return p.get(); }
+void Pad::cd() { p->cd(); }
+void Pad::cd_child(int i) { p->cd(i); }
+void Pad::setMarginTop(float f) { p->SetTopMargin(f); }
+void Pad::setMarginBottom(float f) { p->SetBottomMargin(f); }
+void Pad::setMarginRight(float f) { p->SetRightMargin(f); }
+void Pad::setMarginLeft(float f) { p->SetLeftMargin(f); }
+void Pad::divide(int i, int j) { p->Divide(i, j); }
+void Pad::update() { p->Update(); }
+void Pad::setRect(float f1, float f2, float f3, float f4) {
+    p->SetPad(f1, f2, f3, f4);
+}
+void Pad::save(const std::string &s) {
+    vPrintHigh("Saving to file {}\n", s);
+    std::filesystem::path path(s);
+    // path /= s;
+    std::filesystem::path parent = path.parent_path();
+    if (!std::filesystem::is_directory(parent)) {
+        vPrintHigh("Creating directory {}\n", parent.string());
+        std::filesystem::create_directories(parent);
+    }
+    assert(p != nullptr);
+    p->SaveAs(path.string().c_str());
+}
+
+Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> &data,
                 const PlotOptions &opts) {
-    pad->cd();
+    vPrintHigh("Executing simple plot\n");
+    pad.cd();
     gStyle->SetPalette(opts.palette);
     if (!opts.show_stats) {
         gStyle->SetOptStat(0);
     }
     auto legend = new TLegend();
     int i = 0;
-    for (auto &pe : data) {
+    for (auto &pe : *data) {
         if (opts.logx) {
-            pad->SetLogx();
+            pad.get()->SetLogx();
         }
         if (opts.logy) {
-            pad->SetLogy();
+            pad.get()->SetLogy();
         }
         if (i > 0) {
             pe->Draw("Same");
@@ -46,28 +75,37 @@ Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
         maybe_fun(opts.xrange, [&pe](auto &&s) {
             pe->getXAxis()->SetRangeUser(s.first, s.second);
         });
-        maybe_fun(opts.yrange,
-                  [&pe](auto &&s) {
-                      pe->getYAxis()->SetRangeUser(s.first, s.second);
-                      pe->setMinRange(s.first);
-                      if (s.first < s.second) {
-                          pe->setMaxRange(s.second);
-                      }
-                  },
-                  [&pe]() {
-            pe->setMinRange(std::max(pe->getMinRange() - 0.0001, 0.0000000001));
-        });
+        maybe_fun(
+            opts.yrange,
+            [&pe](auto &&s) {
+                pe->getYAxis()->SetRangeUser(s.first, s.second);
+                pe->setMinRange(s.first);
+                if (s.first < s.second) {
+                    pe->setMaxRange(s.second);
+                }
+            },
+            [&pe]() {
+                pe->setMinRange(
+                    std::max(pe->getMinRange() - 0.0001, 0.0000000001));
+            });
 
         pe->addToLegend(legend);
         ++i;
     }
     setupLegend(legend);
+    pad.drawn_elements.push_back(data);
     return pad;
 }
 
-Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den,
+Pad &ratioPlot(Pad &pad, std::shared_ptr<PlotElementCollection> &plots,
                PlotOptions &opts) {
-    pad->cd();
+    if (plots->size() != 2) {
+        throw std::runtime_error(
+            "Attempted to create a ratio plot with more than 2 plots");
+    }
+    PlotElement *num = plots->at(0).get();
+    PlotElement *den = plots->at(1).get();
+    pad.cd();
     if (!opts.show_stats) {
         gStyle->SetOptStat(0);
     }
@@ -105,21 +143,21 @@ Pad *ratioPlot(Pad *pad, PlotElement *num, PlotElement *den,
     } else {
         yaxis->SetRangeUser(0, 1.5);
     }
-    pad->SetFrameBorderMode(0);
-    pad->SetBorderMode(0);
-    pad->SetBorderSize(0);
+    pad.get()->SetFrameBorderMode(0);
+    pad.get()->SetBorderMode(0);
+    pad.get()->SetBorderSize(0);
     return pad;
 }
 
-Pad *newPlot(int w, int h) {
-    auto c = new TCanvas();
-    c->SetCanvasSize(w, h);
-    return c;
-}
-Pad *newPlot() {
-    auto c = new TCanvas();
-    return c;
-}
+// Pad *newPlot(int w, int h) {
+//     auto c = new TCanvas();
+//     c->SetCanvasSize(w, h);
+//     return c;
+// }
+// Pad *newPlot() {
+//     auto c = new TCanvas();
+//     return c;
+// }
 void setupLegend(TLegend *legend) {
     legend->SetX1(0.7);
     legend->SetY1(0.7);
@@ -142,33 +180,39 @@ void setAxisProperties(TAxis *xaxis, TAxis *yaxis) {
 }
 
 void bindPlotters(sol::state &lua) {
+    auto pad_type = lua.new_usertype<Pad>(
+        "Pad", "set_margin_top", &Pad::setMarginTop, "set_margin_top",
+        &Pad::setMarginBottom, "set_margin_top", &Pad::setMarginRight,
+        "set_margin_top", &Pad::setMarginLeft, "cd",
+        sol::overload(&Pad::cd, &Pad::cd_child), "set_rect", &Pad::setRect,
+        "update", &Pad::update, "divide", &Pad::divide, "save", &Pad::save);
+
     lua["plotters"] = lua.create_table();
     lua["simple"] = simplePlot;
     lua["ratio_plot"] = ratioPlot;
     lua["print_totals"] = printTotals;
-    lua["make_pad"] =
-        sol::overload<Pad *(), Pad * (int, int)>(newPlot, newPlot);
-    lua["plotpad"] = lua.create_table();
-    lua["plotpad"]["save"] = [&lua](Pad *p, const std::string &s) {
-        std::string outbasepath = lua["OUTPUT_BASE_PATH"];
-        std::filesystem::path path(outbasepath);
-        path /= s;
-        std::filesystem::path parent = path.parent_path();
-        if (!std::filesystem::is_directory(parent)) {
-            std::filesystem::create_directories(parent);
-        }
-        p->SaveAs(path.string().c_str());
-    };
-    lua["plotpad"]["divide"] = [](Pad *p, int i, int j) { p->Divide(i, j); };
-    lua["plotpad"]["divide"] = &TVirtualPad::Divide;
-    lua["plotpad"]["rect"] = [](Pad *p, float f1, float f2, float f3,
-                                float f4) { p->SetPad(f1, f2, f3, f4); };
-    lua["plotpad"]["m_top"] = [](Pad &p, float f) { p.SetTopMargin(f); };
-    lua["plotpad"]["m_bot"] = [](Pad &p, float f) { p.SetBottomMargin(f); };
-    lua["plotpad"]["m_right"] = [](Pad &p, float f) { p.SetRightMargin(f); };
-    lua["plotpad"]["m_left"] = [](Pad &p, float f) { p.SetLeftMargin(f); };
-    lua["plotpad"]["cd"] = [](Pad *p, int i) { return p->cd(i); };
-    lua["plotpad"]["update"] = [](Pad *p) { return p->Update(); };
+    //  lua["make_pad"] = sol::overload<Pad *(), Pad *(int, int)>(newPlot,
+    //  newPlot); lua["plotpad"] = lua.create_table(); lua["plotpad"]["save"] =
+    //  [&lua](Pad *p, const std::string &s) {
+    //      std::string outbasepath = lua["OUTPUT_BASE_PATH"];
+    //      std::filesystem::path path(outbasepath);
+    //      path /= s;
+    //      std::filesystem::path parent = path.parent_path();
+    //      if (!std::filesystem::is_directory(parent)) {
+    //          std::filesystem::create_directories(parent);
+    //      }
+    //      p->SaveAs(path.string().c_str());
+    //  };
+    //  lua["plotpad"]["divide"] = [](Pad *p, int i, int j) { p->Divide(i, j);
+    //  }; lua["plotpad"]["divide"] = &TVirtualPad::Divide;
+    //  lua["plotpad"]["rect"] = [](Pad *p, float f1, float f2, float f3,
+    //                              float f4) { p->SetPad(f1, f2, f3, f4); };
+    //  lua["plotpad"]["m_top"] = [](Pad &p, float f) { p.SetTopMargin(f); };
+    //  lua["plotpad"]["m_bot"] = [](Pad &p, float f) { p.SetBottomMargin(f); };
+    //  lua["plotpad"]["m_right"] = [](Pad &p, float f) { p.SetRightMargin(f);
+    //  }; lua["plotpad"]["m_left"] = [](Pad &p, float f) { p.SetLeftMargin(f);
+    //  }; lua["plotpad"]["cd"] = [](Pad *p, int i) { return p->cd(i); };
+    //  lua["plotpad"]["update"] = [](Pad *p) { return p->Update(); };
     lua["create_options"] = [](const sol::table &params) {
         PlotOptions po;
         sol::optional<std::string> xlabel = params["xlabel"];
@@ -186,7 +230,7 @@ void bindPlotters(sol::state &lua) {
         auto xrt = params.get<sol::optional<sol::table>>("xrange");
         if (xrt) {
             using sof = sol::optional<float>;
-            auto[ xl, xu ] = xrt.value().get<sof, sof>(1, 2);
+            auto [xl, xu] = xrt.value().get<sof, sof>(1, 2);
             if (xl && xu) {
                 po.xrange = {xl.value(), xu.value()};
             }
@@ -194,7 +238,7 @@ void bindPlotters(sol::state &lua) {
         auto yrt = params.get<sol::optional<sol::table>>("yrange");
         if (yrt) {
             using sof = sol::optional<float>;
-            auto[ yl, yu ] = yrt.value().get<sof, sof>(1, 2);
+            auto [yl, yu] = yrt.value().get<sof, sof>(1, 2);
             if (yl && yu) {
                 po.yrange = {yl.value(), yu.value()};
             }
@@ -209,17 +253,18 @@ void bindPlotters(sol::state &lua) {
         "PlotOptions", BUILD(PlotOptions, xlabel), BUILD(PlotOptions, ylabel),
         BUILD(PlotOptions, title), BUILD(PlotOptions, show_stats),
         BUILD(PlotOptions, logx), BUILD(PlotOptions, logy),
-        BUILD(InputData, yrange), "xrange", [](InputData *c, float x, float y) {
-                                                c->xrange = {x, y};
-                                                return c;
-                                            },
-        "yrange", [](InputData *c, float x, float y) {
-                      c->yrange = {x, y};
-                      return c;
-                  },
+        BUILD(InputData, yrange), "xrange",
+        [](InputData *c, float x, float y) {
+            c->xrange = {x, y};
+            return c;
+        },
+        "yrange",
+        [](InputData *c, float x, float y) {
+            c->yrange = {x, y};
+            return c;
+        },
         BUILD(PlotOptions, palette));
 }
-
 
 void printTotals(std::vector<std::unique_ptr<PlotElement>> &data,
                  bool entries) {
