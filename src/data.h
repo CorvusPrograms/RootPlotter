@@ -127,11 +127,11 @@ void bindData(sol::state &lua);
 std::vector<MatchedKey> expand(std::vector<InputData> in,
                                const std::string &pattern);
 
-std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
+std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
     const PlotterInput &input);
 
-std::vector<std::unique_ptr<PlotElement>> finalizeManyInputData(
-    const std::vector<PlotterInput> &input);
+std::pair<std::vector<std::unique_ptr<PlotElement>>, bool>
+finalizeManyInputData(const std::vector<PlotterInput> &input);
 
 namespace {
 class state;

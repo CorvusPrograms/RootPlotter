@@ -58,9 +58,7 @@ void DataSource::loadKeys() {
 // }
 
 std::vector<DataSource *> SourceSet::getSources() { return sources; }
-std::vector<DataSource *> DataSource::getSources() {
-    return {this};
-}
+std::vector<DataSource *> DataSource::getSources() { return {this}; }
 
 std::unordered_set<std::string> DataSource::getKeys() const { return keys; }
 
@@ -114,10 +112,11 @@ void bindData(sol::state &lua) {
             c->xrange = {x, y};
             return c;
         },
-        "yrange", [](InputData *c, float x, float y) {
-                      c->yrange = {x, y};
-                      return c;
-                  },
+        "yrange",
+        [](InputData *c, float x, float y) {
+            c->yrange = {x, y};
+            return c;
+        },
         BUILD(InputData, stack));
 
     auto matched_type = lua.new_usertype<MatchedKey>(
@@ -133,25 +132,32 @@ void bindData(sol::state &lua) {
     lua["r_total_hist_entries"] = [](TH1 *hist) { return hist->GetEntries(); };
 }
 
-std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
+std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
     const PlotterInput &input) {
     assert(input.data.source_set);
 
     std::vector<std::unique_ptr<PlotElement>> ret;
     std::vector<DataSource *> sources;
+    bool all_filled = true;
     static int i = 0;
     auto stack = new THStack();
-    for (DataSource *source : input.data.source_set->getSources()) {
+    auto insources = input.data.source_set->getSources();
+
+    for (DataSource *source : insources) {
         ++i;
         TH1 *hist = (TH1 *)(source->getHist(input.name)
                                 ->Clone(std::to_string(i).c_str()));
+        if (input.data.stack) {
+            all_filled = all_filled || (hist->GetEntries() > 0);
+        } else {
+            all_filled = all_filled && (hist->GetEntries() > 0);
+        }
         // TH1 *hist = source->getHist(input.name);
         if (!hist) {
             vRuntimeError("Could not get a histogram from file {} with name {}",
                           source->name, input.name);
         }
         if (input.data.normalize) {
-
             hist->Scale(input.data.norm_to / hist->Integral());
         }
         if (input.data.stack) {
@@ -178,7 +184,20 @@ std::vector<std::unique_ptr<PlotElement>> finalizeInputData(
         }
         ret.push_back(std::move(h));
     }
-    return ret;
+    return {std::move(ret), all_filled};
+}
+
+std::pair<std::vector<std::unique_ptr<PlotElement>>, bool>
+finalizeManyInputData(const std::vector<PlotterInput> &input) {
+    std::vector<std::unique_ptr<PlotElement>> ret;
+    bool all_filled = true;
+    for (const auto &d : input) {
+        auto one_set = finalizeInputData(d);
+        std::move(one_set.first.begin(), one_set.first.end(),
+                  std::back_inserter(ret));
+        all_filled = all_filled && one_set.second;
+    }
+    return {std::move(ret), all_filled};
 }
 
 std::vector<MatchedKey> expand(std::vector<InputData> in,
@@ -186,7 +205,7 @@ std::vector<MatchedKey> expand(std::vector<InputData> in,
     vPrintHigh("Expanding pattern {}\n", pattern);
     std::unordered_set<std::string> keys = in[0].source_set->getKeys();
     for (std::size_t i = 1; i < in.size(); ++i) {
-        for (const auto &k : in [i].source_set->getKeys()) {
+        for (const auto &k : in[i].source_set->getKeys()) {
             if (keys.count(k) == 0) {
                 keys.erase(k);
             }
@@ -220,16 +239,6 @@ std::vector<MatchedKey> expand(std::vector<InputData> in,
     if (ret.empty()) {
         vRuntimeError("Pattern '{}' does not match any key in the data sources",
                       pattern);
-    }
-    return ret;
-}
-
-std::vector<std::unique_ptr<PlotElement>> finalizeManyInputData(
-    const std::vector<PlotterInput> &input) {
-    std::vector<std::unique_ptr<PlotElement>> ret;
-    for (const auto &d : input) {
-        auto one_set = finalizeInputData(d);
-        std::move(one_set.begin(), one_set.end(), std::back_inserter(ret));
     }
     return ret;
 }

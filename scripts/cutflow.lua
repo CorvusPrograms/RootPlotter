@@ -1,5 +1,3 @@
-
-
 function cutflow(hist_name, cuts, data, divide, separator)
    separator = separator or "_"
    ret = { {"name", data:name()} }
@@ -9,7 +7,6 @@ function cutflow(hist_name, cuts, data, divide, separator)
    local next_name
    for k,v in ipairs(cuts) do
       next_name = prev_name .. ( v ~= "" and separator  or "" ) .. v
-      print(next_name)
       hist = r_get_hist(data, next_name)
       prev_name = next_name
       val = r_total_hist_entries(hist)

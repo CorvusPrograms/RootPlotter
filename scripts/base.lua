@@ -8,13 +8,17 @@ function simple_plot(args)
    x = expand_data(data, args[1])
    ret = {}
    for k,v in ipairs(x) do
-      pad = make_pad()
-      table.insert(
-         ret,
-         {v.captures,
-          simple(pad,
-                 finalize_input_data(v.inputs),
-                 create_options(args.opts or {}))})
+      elements, filled = finalize_input_data(v.inputs)
+      if filled then
+         pad = make_pad()
+         table.insert(
+            ret,
+            {v.captures,
+             simple(pad, elements,
+                    create_options(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME})
+                    )
+         )})
+      end
    end
    return ret
 end
@@ -54,20 +58,23 @@ function datamc_ratio(args)
       plotpad.m_bot(bot, 0.25)
       plotpad.m_top(bot, 0)
       plotpad.m_right(bot, 0.05)
-      final=finalize_input_data(v.inputs)
-      for i=2,#final do
-         ratio_plot(bot, final[i], final[1],
-                    create_options(
-                       overwrite_table(
-                          args.opts or {},
-                          {title="",
-                           ylabel="Data/MC",
-                           yrange={0,1.5}}))
-         )
+      final, filled =finalize_input_data(v.inputs)
+      if filled then
+         simple(top, final,
+                create_options(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME, xlabel=nil})))
+         for i=2,#final do
+            ratio_plot(bot, final[i], final[1],
+                       create_options(
+                          overwrite_table(
+                             args.opts or {},
+                             {title="",
+                              ylabel="Data/MC",
+                              yrange={0,1.5}}))
+            )
+         end
+         plotpad.update(pad)
+         table.insert(ret, {v.captures, pad})
       end
-      simple(top, final,  create_options(overwrite_table(args.opts, {xlabel=nil})))
-      plotpad.update(pad)
-      table.insert(ret, {v.captures, pad})
    end
    return ret
 end
@@ -111,12 +118,12 @@ function execute_deferred_plots()
             io.write("                                                                            \r")
          end
          io.write(string.format("Plot [%d:%d/%d], currently plotting histogram %s%s", total, i , #NEED_TO_PLOT, captures.HISTNAME,  VERBOSITY <2 and '\r' or '\n'))
-                  if VERBOSITY < 2 then
-                     io.flush()
-                  end
-                  name = captures.HISTNAME
-                  save_name = args.outdir ..  captures.HISTNAME .. ".pdf"
-                  plotpad.save(v[2], save_name)
+         if VERBOSITY < 2 then
+            io.flush()
+         end
+         name = captures.HISTNAME
+         save_name = args.outdir ..  captures.HISTNAME .. ".pdf"
+         plotpad.save(v[2], save_name)
       end
    end
    if VERBOSITY < 2 then
