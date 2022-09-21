@@ -28,8 +28,14 @@ void SourceSet::initKeys() {
 
 std::unique_ptr<TH1> DataSource::getHist(const std::string &name) {
     assert(file != nullptr);
-    auto ret =
-        std::unique_ptr<TH1>((TH1 *)file->Get<TH1>(name.c_str())->Clone());
+    TH1 *hist;
+    if (cache.count(name)) {
+        hist = cache[name];
+    } else {
+        hist = file->Get<TH1>(name.c_str());
+        cache[name] = hist;
+    }
+    auto ret = std::unique_ptr<TH1>((TH1 *)hist->Clone());
     return ret;
 };
 

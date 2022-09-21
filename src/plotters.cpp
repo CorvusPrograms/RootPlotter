@@ -14,11 +14,17 @@
 #include "util.h"
 #include "verbosity.h"
 
-Pad::Pad() { p = std::shared_ptr<TVirtualPad>(new TCanvas()); }
+Pad::Pad() { p = new TCanvas(); top_level=true; }
+Pad::Pad(TVirtualPad *pad, bool top) : top_level{top} { p = pad; }
 
-TVirtualPad *Pad::get() { return p.get(); }
+TVirtualPad *Pad::get() { return p; }
 void Pad::cd() { p->cd(); }
-void Pad::cd_child(int i) { p->cd(i); }
+Pad Pad::getChild(int i) {
+    auto ret = *this;
+    ret.p=p->cd(i);
+    ret.top_level = false;
+    return ret;
+}
 void Pad::setMarginTop(float f) { p->SetTopMargin(f); }
 void Pad::setMarginBottom(float f) { p->SetBottomMargin(f); }
 void Pad::setMarginRight(float f) { p->SetRightMargin(f); }
@@ -37,8 +43,17 @@ void Pad::save(const std::string &s) {
         vPrintHigh("Creating directory {}\n", parent.string());
         std::filesystem::create_directories(parent);
     }
-    assert(p != nullptr);
+    // assert(p != nullptr);
+    fmt::print("Saving from pad {}\n", fmt::ptr(p));
     p->SaveAs(path.string().c_str());
+}
+
+Pad::~Pad() {
+    fmt::print("Destroying pad {} with realpad {}\n", fmt::ptr(this), fmt::ptr(p));
+    if (top_level) {
+        fmt::print("Destroying top_level pad {}\n", fmt::ptr(this));
+        delete p;
+    }
 }
 
 Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> &data,
@@ -99,49 +114,51 @@ Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> &data,
 
 Pad &ratioPlot(Pad &pad, std::shared_ptr<PlotElementCollection> &plots,
                PlotOptions &opts) {
-    if (plots->size() != 2) {
+    if (plots->size() < 2) {
         throw std::runtime_error(
-            "Attempted to create a ratio plot with more than 2 plots");
+            "Attempted to create a ratio plot without at least 2 plots");
     }
-    PlotElement *num = plots->at(0).get();
-    PlotElement *den = plots->at(1).get();
-    pad.cd();
-    if (!opts.show_stats) {
-        gStyle->SetOptStat(0);
-    }
-    gStyle->SetPalette(opts.palette);
-    auto ratio_plot =
-        new TGraphAsymmErrors(num->getTotals(), den->getTotals(), "pois");
-    num->setMarkAtt(ratio_plot);
-    num->setLineAtt(ratio_plot);
+    PlotElement *den = plots->at(0).get();
+    for (std::size_t i = 1; i < plots->size(); ++i) {
+        PlotElement *num = plots->at(i).get();
+        pad.cd();
+        if (!opts.show_stats) {
+            gStyle->SetOptStat(0);
+        }
+        gStyle->SetPalette(opts.palette);
+        auto ratio_plot =
+            new TGraphAsymmErrors(num->getTotals(), den->getTotals(), "pois");
+        num->setMarkAtt(ratio_plot);
+        num->setLineAtt(ratio_plot);
 
-    ratio_plot->Draw();
+        ratio_plot->Draw();
 
-    auto xaxis = ratio_plot->GetXaxis();
-    auto yaxis = ratio_plot->GetYaxis();
+        auto xaxis = ratio_plot->GetXaxis();
+        auto yaxis = ratio_plot->GetYaxis();
 
-    setAxisProperties(xaxis, yaxis);
-    if (opts.title) {
-        ratio_plot->SetTitle(opts.title.value().c_str());
-    }
-    if (opts.xlabel) {
-        xaxis->SetTitle(opts.xlabel->c_str());
-    }
-    if (opts.ylabel) {
-        yaxis->SetTitle(opts.ylabel->c_str());
-    }
-    if (opts.xrange) {
-        xaxis->SetLimits(opts.xrange->first, opts.xrange->second);
-    } else {
-        ratio_plot->GetHistogram()->GetXaxis()->SetLimits(opts.xrange->first,
-                                                          opts.xrange->second);
-        xaxis->SetLimits(num->getMinDomain(), num->getMaxDomain());
-    }
+        setAxisProperties(xaxis, yaxis);
+        if (opts.title) {
+            ratio_plot->SetTitle(opts.title.value().c_str());
+        }
+        if (opts.xlabel) {
+            xaxis->SetTitle(opts.xlabel->c_str());
+        }
+        if (opts.ylabel) {
+            yaxis->SetTitle(opts.ylabel->c_str());
+        }
+        if (opts.xrange) {
+            xaxis->SetLimits(opts.xrange->first, opts.xrange->second);
+        } else {
+            ratio_plot->GetHistogram()->GetXaxis()->SetLimits(
+                opts.xrange->first, opts.xrange->second);
+            xaxis->SetLimits(num->getMinDomain(), num->getMaxDomain());
+        }
 
-    if (opts.yrange) {
-        yaxis->SetRangeUser(opts.yrange->first, opts.yrange->second);
-    } else {
-        yaxis->SetRangeUser(0, 1.5);
+        if (opts.yrange) {
+            yaxis->SetRangeUser(opts.yrange->first, opts.yrange->second);
+        } else {
+            yaxis->SetRangeUser(0, 1.5);
+        }
     }
     pad.get()->SetFrameBorderMode(0);
     pad.get()->SetBorderMode(0);
@@ -181,11 +198,11 @@ void setAxisProperties(TAxis *xaxis, TAxis *yaxis) {
 
 void bindPlotters(sol::state &lua) {
     auto pad_type = lua.new_usertype<Pad>(
-        "Pad", "set_margin_top", &Pad::setMarginTop, "set_margin_top",
-        &Pad::setMarginBottom, "set_margin_top", &Pad::setMarginRight,
-        "set_margin_top", &Pad::setMarginLeft, "cd",
-        sol::overload(&Pad::cd, &Pad::cd_child), "set_rect", &Pad::setRect,
-        "update", &Pad::update, "divide", &Pad::divide, "save", &Pad::save);
+        "Pad", "set_margin_top", &Pad::setMarginTop, "set_margin_bot",
+        &Pad::setMarginBottom, "set_margin_right", &Pad::setMarginRight,
+        "set_margin_left", &Pad::setMarginLeft, "cd", &Pad::cd, "get_subpad",
+        &Pad::getChild, "set_rect", &Pad::setRect, "update", &Pad::update,
+        "divide", &Pad::divide, "save", &Pad::save);
 
     lua["plotters"] = lua.create_table();
     lua["simple"] = simplePlot;

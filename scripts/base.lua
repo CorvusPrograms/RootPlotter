@@ -11,13 +11,12 @@ function simple_plot(args)
       elements, filled = finalize_input_data(v.inputs)
       if filled then
          pad = Pad:new()
+         simple(pad, elements,
+                create_options(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME})))
          table.insert(
             ret,
-            {v.captures,
-             simple(pad, elements,
-                    create_options(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME})
-                    )
-         )})
+            {v.captures, pad}
+         )
       end
    end
    return ret
@@ -30,9 +29,10 @@ function ratio(args)
    x = expand_data(data,  pattern)
    ret = {}
    for k,v in ipairs(x) do
-      pad = make_pad()
+      pad = Pad:new()
       final=finalize_input_data(v.inputs)
-      table.insert(ret, {v.captures, ratio_plot(pad, final[2], final[1])})
+      ratio_plot(pad, final[2], final[1])
+      table.insert(ret, {v.captures, pad })
    end
    return ret
 end
@@ -44,26 +44,26 @@ function datamc_ratio(args)
    x = expand_data(data, pattern)
    ret = {}
    for k,v in ipairs(x) do
-      pad = make_pad();
-      plotpad.divide(pad, 1,2,0,0,0)
-      top = plotpad.cd(pad,1)
-      bot = plotpad.cd(pad,2)
-
-      plotpad.rect(top, 0, 0.3, 1, 1)
-      plotpad.m_top(top, 0.1)
-      plotpad.m_bot(top, 0)
-      plotpad.m_right(top, 0.05)
-
-      plotpad.rect(bot, 0, 0, 1, 0.3)
-      plotpad.m_bot(bot, 0.25)
-      plotpad.m_top(bot, 0)
-      plotpad.m_right(bot, 0.05)
       final, filled =finalize_input_data(v.inputs)
       if filled then
+         pad = Pad:new();
+         pad:divide(1,2)
+         top = pad:get_subpad(1)
+         bot = pad:get_subpad(2)
+
+         top:set_rect(0, 0.3, 1, 1)
+         top:set_margin_top(0.1)
+         top:set_margin_bot(0)
+         top:set_margin_right(0.05)
+
+         bot:set_rect(0, 0, 1, 0.3)
+         bot:set_margin_bot(0.25)
+         bot:set_margin_top(0)
+         bot:set_margin_right(0.05)
          simple(top, final,
                 create_options(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME, xlabel=nil})))
          for i=2,#final do
-            ratio_plot(bot, final[i], final[1],
+            ratio_plot(bot, final,
                        create_options(
                           overwrite_table(
                              args.opts or {},
@@ -72,10 +72,14 @@ function datamc_ratio(args)
                               yrange={0,1.5}}))
             )
          end
-         plotpad.update(pad)
+         pad:update()
          table.insert(ret, {v.captures, pad})
+         collectgarbage()
+         print("HERE2")
       end
    end
+   collectgarbage()
+   print("HERE5")
    return ret
 end
 
@@ -107,16 +111,21 @@ function execute_deferred_plots()
    total = 0
    start_time = os.time()
    print(string.format("Executing %d plot groups.", #NEED_TO_PLOT))
+   collectgarbage()
+   print("HERE4")
    for i , args in ipairs(NEED_TO_PLOT) do
       local fun=args[1]
       table.remove(args, 1)
       ret = fun(args)
+      collectgarbage()
       for k , v in ipairs(ret) do
          total = total + 1
          captures = v[1]
          if VERBOSITY < 2 then
             io.write("                                                                            \r")
          end
+         collectgarbage()
+         print("HERE4")
          io.write(string.format("Plot [%d:%d/%d], currently plotting histogram %s%s", total, i , #NEED_TO_PLOT, captures.HISTNAME,  VERBOSITY <2 and '\r' or '\n'))
          if VERBOSITY < 2 then
             io.flush()

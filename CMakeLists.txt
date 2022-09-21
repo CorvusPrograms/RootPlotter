@@ -10,7 +10,13 @@ add_compile_options(-Wno-unused-variable)
 add_compile_options(-Wall -Wextra -pedantic -Wno-unused-variable -ftemplate-backtrace-limit=0)
 add_compile_options( $<$<CONFIG:RELEASE>:-O3>
   $<$<CONFIG:DEBUG>:-O0>
-  $<$<CONFIG:DEBUG>:-g>) 
+  $<$<CONFIG:DEBUG>:-g>
+  $<$<CONFIG:DEBUG>:-fsanitize=address>
+  ) 
+
+add_link_options(
+  $<$<CONFIG:DEBUG>:-fsanitize=address>
+)
 
 
 FetchContent_Declare( fmt
@@ -75,7 +81,7 @@ endif()
 FetchContent_Declare (
 tracy
 GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-GIT_TAG master
+GIT_TAG 9ba7171c3dd6f728268a820ee268a62c75f2dfb6
 GIT_SHALLOW TRUE
 GIT_PROGRESS TRUE
 )
@@ -99,6 +105,7 @@ target_include_directories(install_config INTERFACE ${PROJECT_BINARY_DIR}/config
 add_executable(plotter src/plotters.cpp src/data.cpp src/main.cpp src/plot_element.cpp src/verbosity.cpp)
 target_include_directories(plotter PUBLIC ${CMAKE_BINARY_DIR}/generated)
 
+set(TRACY_NO_EXIT ON)
 target_link_libraries(plotter PUBLIC
   fmt::fmt
   ROOT::Core ROOT::Hist ROOT::RIO ROOT::Graf ROOT::Gpad sol2
