@@ -11,11 +11,11 @@ add_compile_options(-Wall -Wextra -pedantic -Wno-unused-variable -ftemplate-back
 add_compile_options( $<$<CONFIG:RELEASE>:-O3>
   $<$<CONFIG:DEBUG>:-O0>
   $<$<CONFIG:DEBUG>:-g>
-  $<$<CONFIG:DEBUG>:-fsanitize=address>
+#  $<$<CONFIG:DEBUG>:-fsanitize=address>
   ) 
 
 add_link_options(
-  $<$<CONFIG:DEBUG>:-fsanitize=address>
+ # $<$<CONFIG:DEBUG>:-fsanitize=address>
 )
 
 
@@ -78,14 +78,12 @@ else()
   target_include_directories(lua SYSTEM  INTERFACE ${LUA_INCLUDE_DIR})
 endif()
 
-FetchContent_Declare (
-tracy
-GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-GIT_TAG 9ba7171c3dd6f728268a820ee268a62c75f2dfb6
-GIT_SHALLOW TRUE
-GIT_PROGRESS TRUE
-)
-FetchContent_MakeAvailable ( tracy )
+#FetchContent_Declare (tracy
+#GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+#GIT_TAG 9ba7171c3dd6f728268a820ee268a62c75f2dfb6
+#GIT_SHALLOW TRUE
+#GIT_PROGRESS TRUE)
+#FetchContent_MakeAvailable ( tracy )
 
 
 #set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
@@ -112,7 +110,7 @@ target_link_libraries(plotter PUBLIC
   lua
   CLI11::CLI11
   install_config
-  TracyClient
+  # TracyClient
   )
 
 
