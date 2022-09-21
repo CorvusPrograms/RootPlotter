@@ -16,15 +16,22 @@
 
 Pad::Pad() {
     p = new TCanvas();
+    vPrintHigh("Creating owning pad {}: {}\n", fmt::ptr(this), fmt::ptr(p));
+    owning = true;
 }
-Pad::Pad(TVirtualPad *pad){ p = pad; }
+Pad::Pad(TVirtualPad *pad) {
+    p = pad;
+    vPrintHigh("Creating nonowning pad {}: {}\n", fmt::ptr(this), fmt::ptr(p));
+}
 
 TVirtualPad *Pad::get() { return p; }
 void Pad::cd() { get()->cd(); }
-Pad* Pad::getChild(int i) {
-    auto  ret = new Pad(get()->GetPad(i));
+Pad Pad::getChild(int i) {
+    auto ret = Pad(get()->GetPad(i));
+    ret.drawn_elements = drawn_elements;
     return ret;
 }
+
 void Pad::setMarginTop(float f) { get()->SetTopMargin(f); }
 void Pad::setMarginBottom(float f) { get()->SetBottomMargin(f); }
 void Pad::setMarginRight(float f) { get()->SetRightMargin(f); }
@@ -46,9 +53,17 @@ void Pad::save(const std::string &s) {
     // assert(p != nullptr);
     get()->SaveAs(path.string().c_str());
 }
+Pad::~Pad() {
+    if (owning) {
+        vPrintHigh("Deleting owning pad {}: {}\n", fmt::ptr(this), fmt::ptr(p));
+        delete p;
+    } else {
+        vPrintHigh("Deleting nonowning pad {}: {}\n", fmt::ptr(this),
+                   fmt::ptr(p));
+    }
+}
 
-
-Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> &data,
+Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> data,
                 const PlotOptions &opts) {
     vPrintHigh("Executing simple plot\n");
     pad.cd();
@@ -96,7 +111,7 @@ Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> &data,
                     std::max(pe->getMinRange() - 0.0001, 0.0000000001));
             });
 
-        pe->addToLegend(legend);
+        //  pe->addToLegend(legend);
         ++i;
     }
     setupLegend(legend);
@@ -104,7 +119,7 @@ Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> &data,
     return pad;
 }
 
-Pad &ratioPlot(Pad &pad, std::shared_ptr<PlotElementCollection> &plots,
+Pad &ratioPlot(Pad &pad, std::shared_ptr<PlotElementCollection> plots,
                PlotOptions &opts) {
     if (plots->size() < 2) {
         throw std::runtime_error(
@@ -275,15 +290,14 @@ void bindPlotters(sol::state &lua) {
         BUILD(PlotOptions, palette));
 }
 
-void printTotals(std::vector<std::unique_ptr<PlotElement>> &data,
-                 bool entries) {
+void printTotals(std::shared_ptr<PlotElementCollection> data, bool entries) {
     if (entries) {
-        for (const auto &pe : data) {
+        for (const auto &pe : *data) {
             fmt::print("({},{}) -- Totals: {}\n", pe->getSourceID(),
                        pe->getName(), pe->getTotals()->GetEntries());
         }
     } else {
-        for (const auto &pe : data) {
+        for (const auto &pe : *data) {
             fmt::print("({},{}) -- Totals: {}\n", pe->getSourceID(),
                        pe->getName(), pe->getTotals()->Integral());
         }

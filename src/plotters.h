@@ -3,12 +3,13 @@
 
 struct Pad {
     TVirtualPad *p;
+    bool owning = false;
     std::vector<std::shared_ptr<PlotElementCollection>> drawn_elements;
     Pad();
     Pad(TVirtualPad *p);
     TVirtualPad *get();
     void cd();
-    Pad *getChild(int i);
+    Pad getChild(int i);
     void setMarginTop(float f);
     void setMarginBottom(float f);
     void setMarginRight(float f);
@@ -17,7 +18,7 @@ struct Pad {
     void update();
     void setRect(float f1, float f2, float f3, float f4);
     void save(const std::string &s);
-    virtual ~Pad() = default;
+    virtual ~Pad();
 };
 
 struct PlotOptions {
@@ -30,12 +31,13 @@ struct PlotOptions {
     int palette = kRainBow;
 };
 
-Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> &data,
+Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> data,
                 const PlotOptions &opts);
 
-Pad &ratioPlot(Pad &pad, std::shared_ptr<PlotElementCollection> &plots,
+Pad &ratioPlot(Pad &pad, std::shared_ptr<PlotElementCollection> plots,
                PlotOptions &opts);
-void printTotals(std::vector<std::unique_ptr<PlotElement>> &data, bool entries);
+
+void printTotals(std::shared_ptr<PlotElementCollection> data, bool entries);
 
 Pad *newPlot(int w, int h);
 Pad *newPlot();

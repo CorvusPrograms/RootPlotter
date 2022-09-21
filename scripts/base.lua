@@ -63,18 +63,17 @@ function datamc_ratio(args)
          simple(top, final,
                 create_options(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME, xlabel=nil})))
          for i=2,#final do
-          --  ratio_plot(bot, final,
-          --             create_options(
-          --                overwrite_table(
-          --                   args.opts or {},
-          --                   {title="",
-          --                    ylabel="Data/MC",
-          --                    yrange={0,1.5}}))
-          -- )
+            ratio_plot(bot, final,
+                       create_options(
+                          overwrite_table(
+                             args.opts or {},
+                             {title="",
+                              ylabel="Data/MC",
+                              yrange={0,1.5}}))
+           )
          end
          pad:update()
          table.insert(ret, {v.captures, pad})
-         collectgarbage()
       end
    end
    collectgarbage()
@@ -114,7 +113,6 @@ function execute_deferred_plots()
       local fun=args[1]
       table.remove(args, 1)
       ret = fun(args)
-      collectgarbage()
       for k , v in ipairs(ret) do
          total = total + 1
          captures = v[1]
