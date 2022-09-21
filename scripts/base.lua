@@ -70,7 +70,7 @@ function datamc_ratio(args)
                              {title="",
                               ylabel="Data/MC",
                               yrange={0,1.5}}))
-           )
+            )
          end
          pad:update()
          table.insert(ret, {v.captures, pad})
@@ -117,7 +117,7 @@ function execute_deferred_plots()
          total = total + 1
          captures = v[1]
          if VERBOSITY < 2 then
-            io.write("                                                                            \r")
+            io.write(string.rep(" ", 100) .. "\r")
          end
          collectgarbage()
          io.write(string.format("Plot [%d:%d/%d], currently plotting histogram %s%s", total, i , #NEED_TO_PLOT, captures.HISTNAME,  VERBOSITY <2 and '\r' or '\n'))
@@ -131,7 +131,7 @@ function execute_deferred_plots()
       end
    end
    if VERBOSITY < 2 then
-      io.write("                                                                            \r")
+      io.write(string.rep(" ", 100) .. "\r")
    end
    io.write(string.format("Generated %d plots in %d seconds.\n", total, os.time() - start_time))
 end

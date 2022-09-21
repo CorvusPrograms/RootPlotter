@@ -49,7 +49,7 @@ struct SourceSet {
         initKeys();
     }
     // std::string to_string();
-    virtual std::unordered_set<std::string> getKeys() const;
+    virtual const std::unordered_set<std::string>& getKeys() const;
     virtual std::vector<DataSource *> getSources();
     virtual ~SourceSet() = default;
     void initKeys();
@@ -77,7 +77,7 @@ struct DataSource : virtual SourceSet {
         return *this;
     }
 
-    virtual std::unordered_set<std::string> getKeys() const;
+    virtual const std::unordered_set<std::string>& getKeys() const;
     virtual std::vector<DataSource *> getSources();
 
     void load();

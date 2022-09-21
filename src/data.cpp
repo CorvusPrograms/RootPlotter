@@ -10,7 +10,7 @@
 #include "util.h"
 #include "verbosity.h"
 
-std::unordered_set<std::string> SourceSet::getKeys() const {
+const std::unordered_set<std::string>& SourceSet::getKeys() const {
     return common_keys;
 }
 
@@ -67,7 +67,7 @@ void DataSource::loadKeys() {
 std::vector<DataSource *> SourceSet::getSources() { return sources; }
 std::vector<DataSource *> DataSource::getSources() { return {this}; }
 
-std::unordered_set<std::string> DataSource::getKeys() const { return keys; }
+const std::unordered_set<std::string>& DataSource::getKeys() const { return keys; }
 
 void bindData(sol::state &lua) {
     lua["finalize_input_data"] =
