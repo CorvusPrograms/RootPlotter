@@ -14,7 +14,7 @@ my_palette = palettes.RainBow
 
 toplot = {
    { "nbjets_medium", "NBjets Medium Working Point", nil},
-   { "met", "MET", {0,300}},
+   { "met", "MET", {0,300}}
 }
 for i=1,2 do
    for _ , v in pairs({{"Pt" , "p_{T}"}, {"E", "Energy"}, {"Eta", "#eta"}, {"Phi","#phi"}}) do

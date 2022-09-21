@@ -14,25 +14,25 @@
 #include "util.h"
 #include "verbosity.h"
 
-Pad::Pad() { p = new TCanvas(); top_level=true; }
-Pad::Pad(TVirtualPad *pad, bool top) : top_level{top} { p = pad; }
+Pad::Pad() {
+    p = new TCanvas();
+}
+Pad::Pad(TVirtualPad *pad){ p = pad; }
 
 TVirtualPad *Pad::get() { return p; }
-void Pad::cd() { p->cd(); }
-Pad Pad::getChild(int i) {
-    auto ret = *this;
-    ret.p=p->cd(i);
-    ret.top_level = false;
+void Pad::cd() { get()->cd(); }
+Pad* Pad::getChild(int i) {
+    auto  ret = new Pad(get()->GetPad(i));
     return ret;
 }
-void Pad::setMarginTop(float f) { p->SetTopMargin(f); }
-void Pad::setMarginBottom(float f) { p->SetBottomMargin(f); }
-void Pad::setMarginRight(float f) { p->SetRightMargin(f); }
-void Pad::setMarginLeft(float f) { p->SetLeftMargin(f); }
-void Pad::divide(int i, int j) { p->Divide(i, j); }
-void Pad::update() { p->Update(); }
+void Pad::setMarginTop(float f) { get()->SetTopMargin(f); }
+void Pad::setMarginBottom(float f) { get()->SetBottomMargin(f); }
+void Pad::setMarginRight(float f) { get()->SetRightMargin(f); }
+void Pad::setMarginLeft(float f) { get()->SetLeftMargin(f); }
+void Pad::divide(int i, int j) { get()->Divide(i, j); }
+void Pad::update() { get()->Update(); }
 void Pad::setRect(float f1, float f2, float f3, float f4) {
-    p->SetPad(f1, f2, f3, f4);
+    get()->SetPad(f1, f2, f3, f4);
 }
 void Pad::save(const std::string &s) {
     vPrintHigh("Saving to file {}\n", s);
@@ -44,17 +44,9 @@ void Pad::save(const std::string &s) {
         std::filesystem::create_directories(parent);
     }
     // assert(p != nullptr);
-    fmt::print("Saving from pad {}\n", fmt::ptr(p));
-    p->SaveAs(path.string().c_str());
+    get()->SaveAs(path.string().c_str());
 }
 
-Pad::~Pad() {
-    fmt::print("Destroying pad {} with realpad {}\n", fmt::ptr(this), fmt::ptr(p));
-    if (top_level) {
-        fmt::print("Destroying top_level pad {}\n", fmt::ptr(this));
-        delete p;
-    }
-}
 
 Pad &simplePlot(Pad &pad, std::shared_ptr<PlotElementCollection> &data,
                 const PlotOptions &opts) {

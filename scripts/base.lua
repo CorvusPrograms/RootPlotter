@@ -63,23 +63,21 @@ function datamc_ratio(args)
          simple(top, final,
                 create_options(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME, xlabel=nil})))
          for i=2,#final do
-            ratio_plot(bot, final,
-                       create_options(
-                          overwrite_table(
-                             args.opts or {},
-                             {title="",
-                              ylabel="Data/MC",
-                              yrange={0,1.5}}))
-            )
+          --  ratio_plot(bot, final,
+          --             create_options(
+          --                overwrite_table(
+          --                   args.opts or {},
+          --                   {title="",
+          --                    ylabel="Data/MC",
+          --                    yrange={0,1.5}}))
+          -- )
          end
          pad:update()
          table.insert(ret, {v.captures, pad})
          collectgarbage()
-         print("HERE2")
       end
    end
    collectgarbage()
-   print("HERE5")
    return ret
 end
 
@@ -112,7 +110,6 @@ function execute_deferred_plots()
    start_time = os.time()
    print(string.format("Executing %d plot groups.", #NEED_TO_PLOT))
    collectgarbage()
-   print("HERE4")
    for i , args in ipairs(NEED_TO_PLOT) do
       local fun=args[1]
       table.remove(args, 1)
@@ -125,7 +122,6 @@ function execute_deferred_plots()
             io.write("                                                                            \r")
          end
          collectgarbage()
-         print("HERE4")
          io.write(string.format("Plot [%d:%d/%d], currently plotting histogram %s%s", total, i , #NEED_TO_PLOT, captures.HISTNAME,  VERBOSITY <2 and '\r' or '\n'))
          if VERBOSITY < 2 then
             io.flush()

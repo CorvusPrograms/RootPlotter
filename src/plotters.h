@@ -2,14 +2,13 @@
 #include "plot_element.h"
 
 struct Pad {
-    TVirtualPad* p;
-    Pad* parent;
+    TVirtualPad *p;
     std::vector<std::shared_ptr<PlotElementCollection>> drawn_elements;
     Pad();
-    Pad(TVirtualPad* p, bool);
+    Pad(TVirtualPad *p);
     TVirtualPad *get();
     void cd();
-    Pad getChild(int i);
+    Pad *getChild(int i);
     void setMarginTop(float f);
     void setMarginBottom(float f);
     void setMarginRight(float f);
@@ -18,8 +17,7 @@ struct Pad {
     void update();
     void setRect(float f1, float f2, float f3, float f4);
     void save(const std::string &s);
-    bool top_level = false;
-    virtual ~Pad();
+    virtual ~Pad() = default;
 };
 
 struct PlotOptions {
