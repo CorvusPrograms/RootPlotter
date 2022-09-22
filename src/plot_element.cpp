@@ -61,14 +61,15 @@ void Histogram::setFillAtt(TAttFill *fill_att) {
     if (!(style.mode & Style::Mode::Fill)) {
         return;
     }
-    if (source->style.palette_idx) {
-        if (style.palette_idx) {
-            auto color = gStyle->GetColorPalette(style.palette_idx.value());
-            fill_att->SetFillColor(color);
-        }
-        if (style.fill_style) {
-            fill_att->SetFillStyle(style.fill_style.value());
-        }
+    if (style.color) {
+        auto color = style.color.value();
+        fill_att->SetFillColor(color);
+    } else if (style.palette_idx) {
+        auto color = gStyle->GetColorPalette(style.palette_idx.value());
+        fill_att->SetFillColor(color);
+    }
+    if (style.fill_style) {
+        fill_att->SetFillStyle(style.fill_style.value());
     }
 }
 void Histogram::setMarkAtt(TAttMarker *mark_att) {
@@ -76,11 +77,12 @@ void Histogram::setMarkAtt(TAttMarker *mark_att) {
     if (!(style.mode | Style::Mode::Marker)) {
         return;
     }
-    if (source->style.palette_idx) {
-        if (style.palette_idx) {
-            auto color = gStyle->GetColorPalette(style.palette_idx.value());
-            mark_att->SetMarkerColor(color);
-        }
+    if (style.color) {
+        auto color = style.color.value();
+        mark_att->SetMarkerColor(color);
+    } else if (style.palette_idx) {
+        auto color = gStyle->GetColorPalette(style.palette_idx.value());
+        mark_att->SetMarkerColor(color);
     }
     if (style.marker_style) {
         mark_att->SetMarkerStyle(style.marker_style.value());
@@ -94,11 +96,12 @@ void Histogram::setLineAtt(TAttLine *line_att) {
     if (!(style.mode | Style::Mode::Line)) {
         return;
     }
-    if (source->style.palette_idx) {
-        if (style.palette_idx) {
-            auto color = gStyle->GetColorPalette(style.palette_idx.value());
-            line_att->SetLineColor(color);
-        }
+    if (style.color) {
+        auto color = style.color.value();
+        line_att->SetLineColor(color);
+    } else if (style.palette_idx) {
+        auto color = gStyle->GetColorPalette(style.palette_idx.value());
+        line_att->SetLineColor(color);
     }
     if (style.line_style) {
         line_att->SetLineStyle(style.line_style.value());
@@ -153,11 +156,20 @@ void Stack::Draw(const std::string &s) {
     int i = 0;
     for (TObject *th : *hist->GetHists()) {
         auto h = static_cast<TH1 *>(th);
-        if (sources[i]->style.palette_idx) {
-            auto pidx = sources[i]->style.palette_idx.value();
-            h->SetFillColor(gStyle->GetColorPalette(pidx));
-            h->SetMarkerColor(gStyle->GetColorPalette(pidx));
-            h->SetLineColor(gStyle->GetColorPalette(pidx));
+        auto color_o = sources[i]->style.color;
+        if (color_o) {
+            auto color = color_o.value();
+            h->SetFillColor(color);
+            h->SetMarkerColor(color);
+            h->SetLineColor(color);
+        } else if (sources[i]->style.palette_idx) {
+            auto pidx_o = sources[i]->style.palette_idx;
+            if (pidx_o) {
+                auto pidx = pidx_o.value();
+                h->SetFillColor(gStyle->GetColorPalette(pidx));
+                h->SetMarkerColor(gStyle->GetColorPalette(pidx));
+                h->SetLineColor(gStyle->GetColorPalette(pidx));
+            }
         }
         ++i;
     }

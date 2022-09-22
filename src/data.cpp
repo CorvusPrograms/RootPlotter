@@ -71,7 +71,7 @@ void bindData(sol::state &lua) {
         "Style", BUILD(Style, mode), BUILD(Style, palette_idx),
         BUILD(Style, marker_style), BUILD(Style, marker_size),
         BUILD(Style, line_width), BUILD(Style, line_style),
-        BUILD(Style, fill_style));
+        BUILD(Style, fill_style), BUILD(Style, color));
 
     auto faststyle = [&lua](DataSource &ds, sol::table s) {
         for (auto pair : s) {

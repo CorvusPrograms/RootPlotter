@@ -1,11 +1,12 @@
 base = "/export/scratch/Research/rpvsusy/data/08_15_2022_FixedBackground/"
 base = "../RPVResearch/data/08_15_2022_FixedBackground/"
+print("HERE")
 
-rpv4 = DataSource:new(base .. "2018_RPV2W_mS-450_mB-0.root"):name("RPV 450"):style{palette_idx=100}
-rpv8 = DataSource.new(base .. "2018_RPV2W_mS-850_mB-0.root"):name("RPV 850"):style{palette_idx=200}
-rpv6 = DataSource.new(base .. "2018_RPV2W_mS-650_mB-0.root"):name("RPV 650"):style{palette_idx=300}
-tt = DataSource.new(base .. "2018_TT.root"):name("t#bar{t}"):style{palette_idx=400}
-qcd = DataSource.new(base .. "2018_QCD.root"):name("QCD"):style{palette_idx=500, mode=plot_mode.fill}
+rpv4 = DataSource:new(base .. "2018_RPV2W_mS-450_mB-0.root"):name("RPV 450"):style{color=2}
+rpv8 = DataSource.new(base .. "2018_RPV2W_mS-850_mB-0.root"):name("RPV 850"):style{color=3}
+rpv6 = DataSource.new(base .. "2018_RPV2W_mS-650_mB-0.root"):name("RPV 650"):style{color=4}
+tt = DataSource.new(base .. "2018_TT.root"):name("t#bar{t}"):style{color=5}
+qcd = DataSource.new(base .. "2018_QCD.root"):name("QCD"):style{color=6, mode=plot_mode.fill}
 
 sig = SourceSet.new({rpv4,rpv6,rpv8})
 bkg = SourceSet.new({tt,qcd})
@@ -16,13 +17,13 @@ toplot = {
    { "nbjets_medium", "NBjets Medium Working Point", nil},
    { "met", "MET", {0,300}},
 }
-for i=1,2 do
-   for _ , v in pairs({{"Pt" , "p_{T}"}, {"E", "Energy"}, {"Eta", "#eta"}, {"Phi","#phi"}}) do
-      table.insert( toplot,
-                    { string.format("Jet_%d_" .. v[1], i),
-                      string.format("Jet %d " .. v[2], i), nil})
-   end
-end
+-- for i=1,2 do
+--    for _ , v in pairs({{"Pt" , "p_{T}"}, {"E", "Energy"}, {"Eta", "#eta"}, {"Phi","#phi"}}) do
+--       table.insert( toplot,
+--                     { string.format("Jet_%d_" .. v[1], i),
+--                       string.format("Jet %d " .. v[2], i), nil})
+--    end
+-- end
 
 
 for k,v in pairs(toplot) do
@@ -46,9 +47,6 @@ end
 
 
 
-x= cutflow("EventCounter_", {"0Lep", "0Lep_HT>700_GenWPt<200"}, rpv4)
-y= cutflow("EventCounter_", {"0Lep", "0Lep_HT>700_GenWPt<200"}, rpv6)
-t =combine_to_table(x,y)
-print_cols_as_rows(t)
+
 
 
