@@ -115,7 +115,7 @@ function execute_deferred_plots()
          total = total + 1
          captures = v[1]
          if VERBOSITY < 2 then
-            io.write("                                                                            \r")
+            io.write(string.rep(" ", 100) .. "\r")
          end
          io.write(string.format("Plot [%d:%d/%d], currently plotting histogram %s%s", total, i , #NEED_TO_PLOT, captures.HISTNAME,  VERBOSITY <2 and '\r' or '\n'))
          if VERBOSITY < 2 then
@@ -127,7 +127,7 @@ function execute_deferred_plots()
       end
    end
    if VERBOSITY < 2 then
-      io.write("                                                                            \r")
+      io.write(string.rep(" ", 100) .. "\r")
    end
    io.write(string.format("Generated %d plots in %d seconds.\n", total, os.time() - start_time))
 end
