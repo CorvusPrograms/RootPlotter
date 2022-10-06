@@ -102,6 +102,7 @@ struct InputData {
     bool normalize = false;
     float norm_to = 1.0f;
     bool stack = false;
+    bool sort = true;
     std::optional<std::pair<float, float>> yrange = std::nullopt,
                                            xrange = std::nullopt;
 

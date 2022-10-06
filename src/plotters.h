@@ -1,6 +1,8 @@
 #pragma once
 #include "plot_element.h"
 
+
+
 struct PlotOptions {
     using SOType = std::optional<std::string>;
     SOType title = std::nullopt, xlabel = std::nullopt, ylabel = std::nullopt;
@@ -21,6 +23,8 @@ Pad *newPlot(int w, int h);
 Pad *newPlot();
 void setupLegend(TLegend *legend);
 void setAxisProperties(TAxis *xaxis, TAxis *yaxis);
+
+Pad* drawText(Pad* pad, const CanvasText& text);
 
 namespace sol {
 class state;

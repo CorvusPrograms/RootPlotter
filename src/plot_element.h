@@ -32,9 +32,9 @@ struct PlotElement {
     virtual float getMinRange() const = 0;
     virtual float getMaxRange() const = 0;
 
-    virtual void setFillAtt(TAttFill *) {};
-    virtual void setMarkAtt(TAttMarker *) {};
-    virtual void setLineAtt(TAttLine *) {};
+    virtual void setFillAtt(TAttFill *){};
+    virtual void setMarkAtt(TAttMarker *){};
+    virtual void setLineAtt(TAttLine *){};
     virtual void setTitle(const std::string &s) = 0;
     virtual void setupRanges() = 0;
 
@@ -127,3 +127,13 @@ class state;
 }
 
 void bindPlotElements(sol::state &lua);
+
+struct CanvasText {
+    std::string text = "";
+    float x = 0.0f, y = 0.0f;
+    float size = 0.025f;
+    float angle = 0.0f;
+    CanvasText() = default;
+    CanvasText(const std::string &s, float ix, float iy)
+        : text{s}, x{ix}, y{iy} {}
+};

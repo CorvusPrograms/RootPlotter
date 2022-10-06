@@ -1,5 +1,14 @@
 require "cutflow"
+require "text"
 require "util"
+
+function add_text(pad, text, x,y)
+   text=Text:new(text,x,y)
+   draw_text(pad, text)
+   return pad
+end
+
+
 
 function simple_plot(args)
    VLOG(2, "Running simple plot with args %s", tprint(args))
@@ -15,7 +24,8 @@ function simple_plot(args)
             ret,
             {v.captures,
              simple(pad, elements,
-                    create_options(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME})
+                    create_options(
+                       do_subs_table(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME}))
                     )
          )})
       end
@@ -60,15 +70,17 @@ function datamc_ratio(args)
       plotpad.m_right(bot, 0.05)
       final, filled =finalize_input_data(v.inputs)
       if filled then
-         simple(top, final,
-                create_options(overwrite_table(args.opts or {}, {title=v.captures.HISTNAME, xlabel=nil})))
+         simple(top,
+                final,
+                create_options(
+                   overwrite_table(args.opts or {}, {title=v.captures.HISTNAME, xlabel=nil})))
          for i=2,#final do
             ratio_plot(bot, final[i], final[1],
                        create_options(
                           overwrite_table(
                              args.opts or {},
                              {title="",
-                              ylabel="Data/MC",
+                              ylabel="S/B",
                               yrange={0,1.5}}))
             )
          end
@@ -123,6 +135,11 @@ function execute_deferred_plots()
          end
          name = captures.HISTNAME
          save_name = args.outdir ..  captures.HISTNAME .. ".pdf"
+         if every_label then
+            for _,t in ipairs(every_label) do
+               draw_text(v[2], t)
+            end
+         end
          plotpad.save(v[2], save_name)
       end
    end
@@ -131,5 +148,6 @@ function execute_deferred_plots()
    end
    io.write(string.format("Generated %d plots in %d seconds.\n", total, os.time() - start_time))
 end
+
 
 

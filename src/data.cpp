@@ -107,7 +107,8 @@ void bindData(sol::state &lua) {
     auto input_data = lua.new_usertype<InputData>(
         "InputData", sol::constructors<InputData(), InputData(SourceSet *)>(),
         BUILD(InputData, source_set), BUILD(InputData, normalize),
-        BUILD(InputData, norm_to), BUILD(InputData, yrange), "xrange",
+        BUILD(InputData, sort), BUILD(InputData, norm_to),
+        BUILD(InputData, yrange), "xrange",
         [](InputData *c, float x, float y) {
             c->xrange = {x, y};
             return c;
@@ -143,6 +144,8 @@ std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
     auto stack = new THStack();
     auto insources = input.data.source_set->getSources();
 
+    std::vector<std::pair<DataSource *, TH1 *>> hists;
+
     for (DataSource *source : insources) {
         ++i;
         TH1 *hist = (TH1 *)(source->getHist(input.name)
@@ -157,6 +160,17 @@ std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
             vRuntimeError("Could not get a histogram from file {} with name {}",
                           source->name, input.name);
         }
+        hists.push_back({source, hist});
+    }
+    if (input.data.stack && input.data.sort) {
+        std::sort(hists.begin(), hists.end(), [](auto &h1, auto &h2) {
+            return h1.second->Integral() < h2.second->Integral();
+        });
+    }
+
+    for (auto &pair : hists) {
+        TH1 *hist = pair.second;
+        DataSource *source = pair.first;
         if (input.data.normalize) {
             hist->Scale(input.data.norm_to / hist->Integral());
         }

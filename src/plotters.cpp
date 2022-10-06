@@ -5,8 +5,9 @@
 #include <filesystem>
 #include <sol/sol.hpp>
 
-#include "TCanvas.h"
 #include "TAxis.h"
+#include "TLatex.h"
+#include "TCanvas.h"
 #include "TGraphAsymmErrors.h"
 #include "TLegend.h"
 #include "TPad.h"
@@ -46,17 +47,19 @@ Pad *simplePlot(Pad *pad, std::vector<std::unique_ptr<PlotElement>> &data,
         maybe_fun(opts.xrange, [&pe](auto &&s) {
             pe->getXAxis()->SetRangeUser(s.first, s.second);
         });
-        maybe_fun(opts.yrange,
-                  [&pe](auto &&s) {
-                      pe->getYAxis()->SetRangeUser(s.first, s.second);
-                      pe->setMinRange(s.first);
-                      if (s.first < s.second) {
-                          pe->setMaxRange(s.second);
-                      }
-                  },
-                  [&pe]() {
-            pe->setMinRange(std::max(pe->getMinRange() - 0.0001, 0.0000000001));
-        });
+        maybe_fun(
+            opts.yrange,
+            [&pe](auto &&s) {
+                pe->getYAxis()->SetRangeUser(s.first, s.second);
+                pe->setMinRange(s.first);
+                if (s.first < s.second) {
+                    pe->setMaxRange(s.second);
+                }
+            },
+            [&pe]() {
+                pe->setMinRange(
+                    std::max(pe->getMinRange() - 0.0001, 0.0000000001));
+            });
 
         pe->addToLegend(legend);
         ++i;
@@ -141,13 +144,22 @@ void setAxisProperties(TAxis *xaxis, TAxis *yaxis) {
     yaxis->SetTitleFont(43);
 }
 
+Pad *drawText(Pad *pad, const CanvasText &text) {
+    pad->cd();
+    TLatex l;
+    l.SetTextSize(text.size);
+    l.SetTextAngle(text.angle);
+    l.DrawLatexNDC(text.x, text.y, text.text.c_str());
+    return pad;
+}
+
 void bindPlotters(sol::state &lua) {
     lua["plotters"] = lua.create_table();
+    lua["draw_text"] = drawText;
     lua["simple"] = simplePlot;
     lua["ratio_plot"] = ratioPlot;
     lua["print_totals"] = printTotals;
-    lua["make_pad"] =
-        sol::overload<Pad *(), Pad * (int, int)>(newPlot, newPlot);
+    lua["make_pad"] = sol::overload<Pad *(), Pad *(int, int)>(newPlot, newPlot);
     lua["plotpad"] = lua.create_table();
     lua["plotpad"]["save"] = [&lua](Pad *p, const std::string &s) {
         std::string outbasepath = lua["OUTPUT_BASE_PATH"];
@@ -186,7 +198,7 @@ void bindPlotters(sol::state &lua) {
         auto xrt = params.get<sol::optional<sol::table>>("xrange");
         if (xrt) {
             using sof = sol::optional<float>;
-            auto[ xl, xu ] = xrt.value().get<sof, sof>(1, 2);
+            auto [xl, xu] = xrt.value().get<sof, sof>(1, 2);
             if (xl && xu) {
                 po.xrange = {xl.value(), xu.value()};
             }
@@ -194,7 +206,7 @@ void bindPlotters(sol::state &lua) {
         auto yrt = params.get<sol::optional<sol::table>>("yrange");
         if (yrt) {
             using sof = sol::optional<float>;
-            auto[ yl, yu ] = yrt.value().get<sof, sof>(1, 2);
+            auto [yl, yu] = yrt.value().get<sof, sof>(1, 2);
             if (yl && yu) {
                 po.yrange = {yl.value(), yu.value()};
             }
@@ -209,17 +221,18 @@ void bindPlotters(sol::state &lua) {
         "PlotOptions", BUILD(PlotOptions, xlabel), BUILD(PlotOptions, ylabel),
         BUILD(PlotOptions, title), BUILD(PlotOptions, show_stats),
         BUILD(PlotOptions, logx), BUILD(PlotOptions, logy),
-        BUILD(InputData, yrange), "xrange", [](InputData *c, float x, float y) {
-                                                c->xrange = {x, y};
-                                                return c;
-                                            },
-        "yrange", [](InputData *c, float x, float y) {
-                      c->yrange = {x, y};
-                      return c;
-                  },
+        BUILD(InputData, yrange), "xrange",
+        [](InputData *c, float x, float y) {
+            c->xrange = {x, y};
+            return c;
+        },
+        "yrange",
+        [](InputData *c, float x, float y) {
+            c->yrange = {x, y};
+            return c;
+        },
         BUILD(PlotOptions, palette));
 }
-
 
 void printTotals(std::vector<std::unique_ptr<PlotElement>> &data,
                  bool entries) {

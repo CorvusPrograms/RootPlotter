@@ -111,8 +111,6 @@ void Histogram::setLineAtt(TAttLine *line_att) {
     }
 }
 
-void bindPlotElements(sol::state &lua) {}
-
 Stack::Stack(const std::vector<DataSource *> s, THStack *h)
     : sources{s}, hist{h} {}
 
@@ -197,4 +195,15 @@ std::string Stack::getSourceID() const {
         ret += s->name + ",";
     }
     return ret;
+}
+
+void bindPlotElements(sol::state &lua) {
+    lua.new_usertype<CanvasText>(
+        "Text", sol::constructors<CanvasText(std::string, float, float)>(),
+        BUILD(CanvasText, size), BUILD(CanvasText, text),
+        BUILD(CanvasText, angle), "pos", [](CanvasText *c, float x, float y) {
+            c->x = x;
+            c->y = y;
+            return c;
+        });
 }

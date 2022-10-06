@@ -32,6 +32,7 @@ int main(int argc, char *argv[]) {
     bindPlotters(lua);
     bindData(lua);
     bindGraphicalData(lua);
+    bindPlotElements(lua);
     lua.script_file(APP_INSTALL_DATAROOTDIR "/base.lua");
 
     CLI::App app{
