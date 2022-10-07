@@ -1,12 +1,18 @@
 common_subs={
-   [ "gte" ]="#gte",
-   [ "pt" ]="p_{T}",
-   [ "_" ]=" "
+   {"(%a+)_medium", "%1(Medium WP)"},
+   {"pt(%d+)", "pt#geq%1"},
+   {"gte" , "#geq"},
+   {"_" , " - "},
+   {"pt" , "p_{T}"},
+   {"(%d)Lep" , "%1 Lepton"}
 }
 
 
 function do_subs(str)
-   for pat, rep in pairs(common_subs) do
+   print("HERE")
+   for _, pair in pairs(common_subs) do
+      pat,rep = pair[1], pair[2]
+      print(str)
       str=str:gsub(pat, rep)
    end
    return str
