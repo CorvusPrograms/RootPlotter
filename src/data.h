@@ -123,25 +123,18 @@ struct MatchedKey {
 namespace sol {
 class state;
 }
-void bindData(sol::state &lua);
 
 std::vector<MatchedKey> expand(std::vector<InputData> in,
                                const std::string &pattern);
-
 std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
     const PlotterInput &input);
-
 std::pair<std::vector<std::unique_ptr<PlotElement>>, bool>
 finalizeManyInputData(const std::vector<PlotterInput> &input);
 
-namespace {
-class state;
-}
+void bindData(sol::state &lua);
 void bindPlotters(sol::state &lua);
-
 void bindMarkerStyles(sol::state &lua);
 void bindLineStyles(sol::state &lua);
 void bindFillStyles(sol::state &lua);
 void bindPalettes(sol::state &lua);
-
 void bindGraphicalData(sol::state &lua);

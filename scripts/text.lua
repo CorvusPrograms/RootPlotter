@@ -9,10 +9,8 @@ common_subs={
 
 
 function do_subs(str)
-   print("HERE")
    for _, pair in pairs(common_subs) do
       pat,rep = pair[1], pair[2]
-      print(str)
       str=str:gsub(pat, rep)
    end
    return str

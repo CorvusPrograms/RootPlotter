@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_compile_options(-Wno-unused-variable)
 add_compile_options(-Wall -Wextra -pedantic -Wno-unused-variable -ftemplate-backtrace-limit=0)
+add_link_options( -L /usr/local/lib -lprofiler)
 add_compile_options( $<$<CONFIG:RELEASE>:-O3>
   $<$<CONFIG:DEBUG>:-O0>
   $<$<CONFIG:DEBUG>:-g>) 
@@ -111,7 +112,6 @@ target_link_libraries(plotter PUBLIC
 
 
 message("Installing scripts to ${CMAKE_INSTALL_FULL_DATADIR}")
-
 install(TARGETS plotter DESTINATION ${GNU_INSTALL_BINDIR})
 install(DIRECTORY scripts
   DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/rootplotter)
