@@ -18,6 +18,9 @@
 #include "pool.h"
 #include "verbosity.h"
 
+
+
+
 struct ApplicationOptions {
     std::string config_file_name;
     std::string output_base_path;
@@ -88,6 +91,7 @@ int main(int argc, char *argv[]) {
     rootp::bindFillStyles(lua);
     rootp::bindPalettes(lua);
     rootp::bindDataOps(lua);
+    rootp::bindPlotting(lua);
 
     lua.script_file(APP_INSTALL_DATAROOTDIR "/base.lua");
 
@@ -118,6 +122,16 @@ int main(int argc, char *argv[]) {
     }
 
     auto result = lua.safe_script_file(opts.config_file_name);
+
+    if (!result.valid()) {
+        sol::error err = result;
+        fmt::print(
+            "An error occured during execution. This likely means "
+            "that you passed invalid parameters to one of your 'plot' "
+            "calls\n:\nException:\n{}\n",
+            err.what());
+        return 1;
+    }
 
     return 0;
 }

@@ -1,5 +1,7 @@
 #pragma once
 #include <fmt/format.h>
+#include <iostream>
+#include <cstdio>
 
 extern int verbosity;
 
@@ -13,7 +15,7 @@ enum class VerbosityLevel : int {
 template <typename... Args>
 void vPrint(VerbosityLevel level, std::string_view format, Args&&... args) {
     if (static_cast<int>(level) <= verbosity) {
-        fmt::print(format, args...);
+        fmt::print(stderr, format, args...);
     }
 }
 
