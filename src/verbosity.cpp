@@ -1,3 +1,3 @@
 #include "verbosity.h"
-int verbosity = 0;
 
+int verbosity = 0;

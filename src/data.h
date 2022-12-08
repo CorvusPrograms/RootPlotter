@@ -1,69 +1,55 @@
 #pragma once
 
-#include <THStack.h>
+#include <TPad.h>
 #include <fmt/format.h>
 
+#include <filesystem>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include "glob.hpp"
-#include "plot_element.h"
+#include "style.h"
+#include "verbosity.h"
 
 class TFile;
 class TH1;
-struct PlotElement;
-struct Histogram;
-struct Stack;
 
-struct Style {
-    enum Mode {
-        None = 0,
-        Line = 1 << 0,
-        Marker = 1 << 1,
-        Fill = 1 << 2,
-    };
-
-    Mode mode = Mode::Marker;
-
-    using StyleId_t = int;
-    std::optional<int> palette_idx = std::nullopt;
-    std::optional<int> color = std::nullopt;
-    std::optional<StyleId_t> marker_style = std::nullopt;
-    std::optional<float> marker_size = std::nullopt;
-    std::optional<StyleId_t> line_style = std::nullopt;
-    std::optional<int> line_width = std::nullopt;
-    std::optional<StyleId_t> fill_style = std::nullopt;
-};
+namespace rootp {
 
 struct DataSource;
 
 struct SourceSet {
     std::vector<DataSource *> sources;
+
     std::unordered_set<std::string> common_keys;
+
     SourceSet() = default;
     SourceSet(const std::vector<DataSource *> dsv) : sources{dsv} {
         initKeys();
     }
     // std::string to_string();
-    virtual std::unordered_set<std::string> getKeys() const;
-    virtual std::vector<DataSource *> getSources();
-    virtual ~SourceSet() = default;
+    std::unordered_set<std::string> getKeys() const { return common_keys; }
+    const std::vector<DataSource *> getSources() const { return sources; }
+    ~SourceSet() = default;
     void initKeys();
 };
 
-struct DataSource : virtual SourceSet {
+struct DataSource {
     std::unordered_set<std::string> tags;
     std::unordered_set<std::string> keys;
+
     std::string path;
     std::string name;
+
     Style style;
     TFile *file = nullptr;
+
 
     DataSource(const std::string &p, const std::string &n) : DataSource(p) {
         name = n;
     }
+
     DataSource(const std::string &p) : path{p} {
         load();
         loadKeys();
@@ -74,67 +60,27 @@ struct DataSource : virtual SourceSet {
         return *this;
     }
 
-    virtual std::unordered_set<std::string> getKeys() const;
-    virtual std::vector<DataSource *> getSources();
-
     void load();
     void loadKeys();
-    TH1 *getHist(const std::string &name);
+    std::shared_ptr<TH1> getHist(const std::string &name) const;
 
-    //   std::string to_string(){
-    //       return fmt::format("Datasource at {}\n", fmt::ptr(this));
-    //   }
-
-    //   DataSource &operator=(const DataSource &ds) {
-    //       fmt::print("Copy constructing data source at {} from {}\n ",
-    //                  fmt::ptr(this), fmt::ptr(&ds));
-    //       return *this;
-    //   }
-    //   DataSource(const DataSource &ds) {
-    //       fmt::print("Copy constructing data source at {} from {}\n ",
-    //                  fmt::ptr(this), fmt::ptr(&ds));
-    //   }
-    virtual ~DataSource() {}
+    virtual ~DataSource() = default;
 };
 
-struct InputData {
-    SourceSet *source_set;
-    bool normalize = false;
-    float norm_to = 1.0f;
-    bool stack = false;
-    bool sort = true;
-    std::optional<std::pair<float, float>> yrange = std::nullopt,
-                                           xrange = std::nullopt;
-
-    InputData() = default;
-    InputData(SourceSet *s) : source_set{s} {}
-};
-
-struct PlotterInput {
+struct PlotData {
+    std::shared_ptr<TH1> hist;
+    Style style;
+    std::string source_name;
     std::string name;
-    InputData data;
 };
 
-struct MatchedKey {
-    std::vector<PlotterInput> inputs;
-    std::unordered_map<std::string, std::string> captures;
-};
-
-namespace sol {
-class state;
+inline PlotData getData(const DataSource &s, const std::string &name) {
+    return PlotData{s.getHist(name), s.style, s.name, name};
 }
 
-std::vector<MatchedKey> expand(std::vector<InputData> in,
-                               const std::string &pattern);
-std::pair<std::vector<std::unique_ptr<PlotElement>>, bool> finalizeInputData(
-    const PlotterInput &input);
-std::pair<std::vector<std::unique_ptr<PlotElement>>, bool>
-finalizeManyInputData(const std::vector<PlotterInput> &input);
+std::vector<PlotData> getData(const SourceSet &s, const std::string &name);
 
-void bindData(sol::state &lua);
-void bindPlotters(sol::state &lua);
-void bindMarkerStyles(sol::state &lua);
-void bindLineStyles(sol::state &lua);
-void bindFillStyles(sol::state &lua);
-void bindPalettes(sol::state &lua);
-void bindGraphicalData(sol::state &lua);
+std::unordered_map<std::string, std::vector<PlotData>> extractMatchingHistos(
+    const SourceSet &set, const std::string &pattern);
+
+}  // namespace rootp
