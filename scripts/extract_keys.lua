@@ -4,7 +4,8 @@ all_data_sources = {}
 
 for _,v in pairs(_G) do
    if type(v) == "userdata" then
-      if (getmetatable(v) or {}).__name == "sol.DataSource" then
+      print((getmetatable(v) or {}).__name)
+      if string.find((getmetatable(v) or {}).__name or "", "DataSource" ) then
          table.insert(all_data_sources, v)
       end
     end

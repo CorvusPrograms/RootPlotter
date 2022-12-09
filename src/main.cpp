@@ -18,9 +18,6 @@
 #include "pool.h"
 #include "verbosity.h"
 
-
-
-
 struct ApplicationOptions {
     std::string config_file_name;
     std::string output_base_path;
@@ -72,11 +69,10 @@ int main(int argc, char *argv[]) {
     TH1::AddDirectory(kFALSE);
     ROOT::EnableThreadSafety();
     gErrorIgnoreLevel = kFatal;
-    verbosity = 2;
     sol::state lua;
     lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table,
                        sol::lib::io, sol::lib::debug, sol::lib::os,
-                       sol::lib::package, sol::lib::math);
+                       sol::lib::package, sol::lib::math, sol::lib::coroutine);
     sol::optional<std::string> lua_path = lua["package"]["path"];
     std::string new_path;
     if (lua_path) {
@@ -120,6 +116,10 @@ int main(int argc, char *argv[]) {
     if (!opts.cli_script.empty()) {
         lua.script(opts.cli_script);
     }
+    if (opts.extract_keys) {
+        lua.script("function plot(...) end");
+        lua.script("function execute_deferred_plots(...) end");
+    }
 
     auto result = lua.safe_script_file(opts.config_file_name);
 
@@ -131,6 +131,10 @@ int main(int argc, char *argv[]) {
             "calls\n:\nException:\n{}\n",
             err.what());
         return 1;
+    }
+
+    if (opts.extract_keys) {
+        lua.script_file(APP_INSTALL_DATAROOTDIR "/extract_keys.lua");
     }
 
     return 0;

@@ -12,14 +12,16 @@ struct underlying_optional<
     using type = typename T::value_type;
 };
 
-#define BUILD(C, var) \
-    #var, sol::overload(                                                  \
+#define BUILD(C, var)                                                     \
+#var, sol::overload(                                                  \
               [](sol::object c,                                           \
                  const underlying_optional <decltype(C::var)>::type &v) { \
                   c.as<C>().var = v;                                      \
                   return c;                                               \
               },                                                          \
-              [](sol::object c)->decltype(c.as<C>().var)&{ return c.as<C>().var; })
+              [](sol::object c) -> decltype(c.as <C>().var) & {           \
+                  return c.as<C>().var;                                   \
+              })
 
 template <typename T, typename F>
 void maybe_fun(const std::optional<T> &opt, F &&f) {
