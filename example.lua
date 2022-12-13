@@ -1,4 +1,4 @@
-base = "../RPVResearch/test/AllSamplesAK15/CONDOR_RPV_OUT/"
+base = "../RPVResearch/data/AllSamplesAK15/CONDOR_RPV_OUT/"
 
 rpv4 = DataSource:new(base .. "2018_RPV2W_mS-450_mB-0.root"):name("RPV 450"):style{color=1}
 rpv8 = DataSource.new(base .. "2018_RPV2W_mS-850_mB-0.root"):name("RPV 850"):style{color=2}
@@ -11,9 +11,7 @@ sig = SourceSet.new({rpv4,rpv6,rpv8})
 
 
 
-plot{sigbkg, "NJets_pt30*", sig, bkg, Options:new():logy(true):y_label("Weight Events")}
-plot{sigbkg, "NJets_pt20*", sig, bkg, Options:new():logy(true):y_label("Weight Events")}
-plot{sigbkg, "nbjets*", sig, bkg, Options:new():logy(true):y_label("Weight Events")}
+plot{sigbkg, "nbjets_*Lep", sig, bkg, Options:new():logy(true):y_label("Weight Events")}
+plot{simple_hist, "nbjets_*Lep", sig, 1 , Options:new():logy(false):y_label("Normed Events")}
 
-execute_deferred_plots()
 

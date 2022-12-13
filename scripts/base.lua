@@ -7,23 +7,50 @@ function sigbkg(tbl)
    sig = tbl[2]
    bkg = tbl[3]
    options = tbl[4]
+   subpath = tbl[5]
    sig_set = get_histos(sig, hist_glob)
    bkg_set = get_histos(bkg, hist_glob)
+
    coroutine.yield()
    for key,set in pairs(sig_set) do
+      transforms.sort_integral(bkg_set[key])
       dp = DrawPad:new()
       legend = plotting.new_legend(dp)
-      plotting.stack(dp, 0 , bkg_set[key],
-                     options:x_label(key):plot_title(key));
+      plotting.stack(dp, 0 , bkg_set[key], options:plot_title(key))
       plotting.simple(dp, 0 , set, Options:new())
       plotting.add_to_legend(legend,  set)
       plotting.add_to_legend(legend,  bkg_set[key])
       plotting.add_legend_to_pad(legend, dp, 0);
-      plotting.save_pad(dp, OUTPUT_BASE_PATH .. "/" .. key .. ".pdf")
+      plotting.save_pad(dp, OUTPUT_BASE_PATH .. "/" .. subpath .. "/".. key .. ".pdf")
       coroutine.yield(key)
    end
 end
 
+function simple_hist(tbl)
+   hist_glob = tbl[1]
+   sig = tbl[2]
+   normed=tbl[3] or 1
+   options = tbl[4]
+   subpath = tbl[5]
+   sig_set = get_histos(sig, hist_glob)
+   coroutine.yield()
+   for key,set in pairs(sig_set) do
+      if normed then
+         to_plot = transforms.norm_to(set, normed)
+      else 
+         to_plot = set
+      end
+
+
+      dp = DrawPad:new()
+      legend = plotting.new_legend(dp)
+      plotting.simple(dp, 0 , to_plot, options:plot_title(key))
+      plotting.add_to_legend(legend,  to_plot)
+      plotting.add_legend_to_pad(legend, dp, 0);
+      plotting.save_pad(dp, OUTPUT_BASE_PATH .. "/" .. subpath .. "/" .. key .. ".pdf")
+      coroutine.yield(key)
+   end
+end
 
 
 function plot(args)

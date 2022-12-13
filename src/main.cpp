@@ -1,6 +1,7 @@
 #include <TCanvas.h>
 #include <TError.h>
 #include <TROOT.h>
+#include <TStyle.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
@@ -69,6 +70,7 @@ int main(int argc, char *argv[]) {
     TH1::AddDirectory(kFALSE);
     ROOT::EnableThreadSafety();
     gErrorIgnoreLevel = kFatal;
+    gStyle->SetOptStat(0);
     sol::state lua;
     lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table,
                        sol::lib::io, sol::lib::debug, sol::lib::os,
@@ -122,15 +124,23 @@ int main(int argc, char *argv[]) {
     }
 
     auto result = lua.safe_script_file(opts.config_file_name);
-
     if (!result.valid()) {
         sol::error err = result;
         fmt::print(
-            "An error occured during execution. This likely means "
+            "Caught exception during user script execution, please check the "
+            "validity of your script:\nException:\n{}\n",
+            err.what());
+        return 1;
+    }
+    result = lua.safe_script("execute_deferred_plots()");
+    if (!result.valid()) {
+        sol::error err = result;
+        fmt::print(
+            "Caught exception during user plot execution. This likely means "
             "that you passed invalid parameters to one of your 'plot' "
             "calls\n:\nException:\n{}\n",
             err.what());
-        return 1;
+        return 2;
     }
 
     if (opts.extract_keys) {
