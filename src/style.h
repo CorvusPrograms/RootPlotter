@@ -23,4 +23,4 @@ struct Style {
     std::optional<StyleId_t> fill_style = std::nullopt;
 };
 
-}  // namespace rp
+}  // namespace rootp

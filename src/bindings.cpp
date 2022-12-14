@@ -1,5 +1,6 @@
 #include "bindings.h"
 
+#include <TColor.h>
 #include <TFile.h>
 
 #include <sol/sol.hpp>
@@ -47,6 +48,10 @@ void bindPlotting(sol::state &lua) {
         BUILD(CommonOptions, normalize), BUILD(CommonOptions, x_label),
         BUILD(CommonOptions, y_label), BUILD(CommonOptions, plot_title),
         BUILD(CommonOptions, xrange), BUILD(CommonOptions, yrange));
+    lua["new_color"] = sol::overload(
+        [](int r, int g, int b) { return TColor::GetColor(r, g, b); },
+        [](float r, float g, float b) { return TColor::GetColor(r, g, b); },
+        [](const std::string &hex) { return TColor::GetColor(hex.c_str()); });
 
     lua["plotting"] = lua.create_table();
     lua["plotting"]["simple"] = plotStandard;

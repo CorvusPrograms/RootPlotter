@@ -91,8 +91,16 @@ int main(int argc, char *argv[]) {
     rootp::bindDataOps(lua);
     rootp::bindPlotting(lua);
 
-    lua.script_file(APP_INSTALL_DATAROOTDIR "/base.lua");
 
+    auto base_result = lua.script_file(APP_INSTALL_DATAROOTDIR "/base.lua");
+    if (!base_result.valid()) {
+        sol::error err = base_result;
+        fmt::print(
+            "Caught exception during program script execution, please check the "
+            "validity of your script:\nException:\n{}\n",
+            err.what());
+        return 1;
+    }
     ApplicationOptions opts;
 
     auto app = makeCLI(opts);

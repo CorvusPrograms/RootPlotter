@@ -32,6 +32,8 @@ void sortIntegral(Iter begin, Iter end) {
 
 struct DrawPad {
     std::unique_ptr<TVirtualPad> pad = std::make_unique<TCanvas>();
+    TH1 *master;
+    float min_y, max_y;
     std::vector<std::shared_ptr<TObject>> objects;
 };
 

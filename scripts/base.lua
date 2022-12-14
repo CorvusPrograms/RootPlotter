@@ -2,6 +2,16 @@ require "util"
 
 NEED_TO_PLOT = {}
 
+
+function co_wrapper(f, ... )
+   local forward = {...} 
+   local co = coroutine.create(function () f(table.unpack(forward)) end) 
+   return function ()
+      local status, res  = coroutine.resume(co)
+      return res
+    end
+end
+
 function sigbkg(tbl)
    hist_glob = tbl[1]
    sig = tbl[2]
@@ -10,8 +20,6 @@ function sigbkg(tbl)
    subpath = tbl[5]
    sig_set = get_histos(sig, hist_glob)
    bkg_set = get_histos(bkg, hist_glob)
-
-   coroutine.yield()
    for key,set in pairs(sig_set) do
       transforms.sort_integral(bkg_set[key])
       dp = DrawPad:new()
@@ -26,6 +34,9 @@ function sigbkg(tbl)
    end
 end
 
+
+
+
 function simple_hist(tbl)
    hist_glob = tbl[1]
    sig = tbl[2]
@@ -33,15 +44,12 @@ function simple_hist(tbl)
    options = tbl[4]
    subpath = tbl[5]
    sig_set = get_histos(sig, hist_glob)
-   coroutine.yield()
    for key,set in pairs(sig_set) do
       if normed then
          to_plot = transforms.norm_to(set, normed)
       else 
          to_plot = set
       end
-
-
       dp = DrawPad:new()
       legend = plotting.new_legend(dp)
       plotting.simple(dp, 0 , to_plot, options:plot_title(key))
@@ -67,11 +75,7 @@ function execute_deferred_plots()
       group = group + 1
       local fun=args[1]
       table.remove(args, 1)
-      co = coroutine.create(fun)
-      coroutine.resume(co, args)
-      cont = true
-      while cont do
-         cont, key = coroutine.resume(co)
+      for key in co_wrapper(fun, args) do
          total = total + 1
          if VERBOSITY < 2 then
             io.write(string.rep(" ", 100) .. "\r")
@@ -88,4 +92,17 @@ function execute_deferred_plots()
    io.write(string.format("Generated %d plots in %d seconds.\n", total, os.time() - start_time))
 end
 
+
+colors = {
+   new_color("#1f77b4"),
+   new_color("#ff7f0e"),
+   new_color("#2ca02c"),
+   new_color("#d62728"),
+   new_color("#9467bd"),
+   new_color("#8c564b"),
+   new_color("#e377c2"),
+   new_color("#7f7f7f"),
+   new_color("#bcbd22"),
+   new_color("#17becf")
+}
 

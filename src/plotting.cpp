@@ -77,28 +77,35 @@ void saveDrawPad(const DrawPad &p, const std::string &path) {
     saveDrawPad(p, std::filesystem::path(path));
 }
 
+void auto_range(DrawPad &dp, float other_min, float other_max) {
+    float old_min = dp.master->GetMinimum(0.000001);
+    float old_max = dp.master->GetMaximum();
+    dp.min_y = std::min(old_min, other_min);
+    dp.max_y = std::max(old_max, other_max);
+    //  dp.master->SetMinimum(dp.min_y);
+    //  dp.master->SetMaximum(dp.max_y);
+}
+
 void plotStandard(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
                   const CommonOptions &options) {
     auto pad = dp.pad.get();
     pad->cd(subpad);
     int i = 0;
-
-    auto legend = new TLegend();
-
     for (const auto &d : data) {
+        if (!dp.master) {
+            dp.master = d.hist.get();
+        }
         applyCommonOptions(d.hist.get(), options);
         applyCommonOptions(pad, options);
-
         dp.objects.emplace_back(d.hist);
-
-        legend->AddEntry(d.hist.get(), d.source_name.c_str());
 
         setMarkAtt(d.style, d.hist.get());
         setLineAtt(d.style, d.hist.get());
         setFillAtt(d.style, d.hist.get());
-
         d.hist->Draw("Same E");
+        auto_range(dp, d.hist->GetMinimum(0.00001), d.hist->GetMaximum());
         ++i;
+        pad->Update();
     }
 }
 
@@ -124,7 +131,6 @@ void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
     pad->cd(subpad);
     auto stack = new THStack;
     int i = 0;
-
     bool needs_fill = false;
     for (const PlotData &d : data) {
         applyCommonOptions(d.hist.get(), options);
@@ -139,10 +145,19 @@ void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
         dp.objects.emplace_back(d.hist);
     }
     std::string hist_options = "";
+    if (!dp.master) {
+        hist_options += "SAME";
+    }
     if (needs_fill) {
         hist_options += "hist";
     }
     stack->Draw(hist_options.c_str());
+    if (!dp.master) {
+        dp.master = stack->GetHistogram();
+    }
+    auto_range(dp, stack->GetMinimum(), stack->GetMaximum());
+    stack->SetMinimum(0.0001);
+    stack->SetMaximum(dp.max_y);
     applyCommonOptions(pad, options);
     applyCommonOptions(stack, options);
 }
