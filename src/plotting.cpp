@@ -77,11 +77,35 @@ void saveDrawPad(const DrawPad &p, const std::string &path) {
     saveDrawPad(p, std::filesystem::path(path));
 }
 
-void auto_range(DrawPad &dp, float other_min, float other_max) {
-    float old_min = dp.master->GetMinimum(0.000001);
-    float old_max = dp.master->GetMaximum();
-    dp.min_y = std::min(old_min, other_min);
-    dp.max_y = std::max(old_max, other_max);
+float getMin(TH1 *hist, float cutoff) { return hist->GetMinimum(cutoff); }
+float getMin(THStack *hist, float cutoff) {
+    double min = 10000000;
+    for (TObject *o : *hist->GetHists()) {
+        auto h = static_cast<TH1 *>(o);
+        min = std::min(h->GetMinimum(cutoff), min);
+    }
+    return min;
+}
+
+template <typename T>
+void auto_range(DrawPad &dp, T *other, float cutoff = 0.000001) {
+    if (!dp.init) {
+        dp.master = other;
+        dp.init = true;
+    }
+    std::visit(
+        [&](const auto &x) {
+            assert(x);
+            float other_min = getMin(other, cutoff);
+            float other_max = other->GetMaximum();
+            float old_min = getMin(x, cutoff);
+            float old_max = x->GetMaximum();
+            dp.min_y = std::min(old_min, other_min);
+            dp.max_y = std::max(old_max, other_max);
+            x->SetMinimum(dp.min_y);
+            x->SetMaximum(dp.max_y);
+        },
+        dp.master);
     //  dp.master->SetMinimum(dp.min_y);
     //  dp.master->SetMaximum(dp.max_y);
 }
@@ -92,18 +116,18 @@ void plotStandard(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
     pad->cd(subpad);
     int i = 0;
     for (const auto &d : data) {
-        if (!dp.master) {
-            dp.master = d.hist.get();
-        }
         applyCommonOptions(d.hist.get(), options);
         applyCommonOptions(pad, options);
         dp.objects.emplace_back(d.hist);
-
         setMarkAtt(d.style, d.hist.get());
         setLineAtt(d.style, d.hist.get());
         setFillAtt(d.style, d.hist.get());
-        d.hist->Draw("Same E");
-        auto_range(dp, d.hist->GetMinimum(0.00001), d.hist->GetMaximum());
+        if (d.hist->GetEntries() > 0) {
+            d.hist->Draw("Same E");
+            auto_range(dp, d.hist.get());
+        }
+        d.hist->SetMinimum(dp.min_y);
+        d.hist->SetMaximum(dp.max_y);
         ++i;
         pad->Update();
     }
@@ -132,32 +156,28 @@ void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
     auto stack = new THStack;
     int i = 0;
     bool needs_fill = false;
+    bool at_least_one = false;
     for (const PlotData &d : data) {
         applyCommonOptions(d.hist.get(), options);
         setMarkAtt(d.style, d.hist.get());
         setLineAtt(d.style, d.hist.get());
         setFillAtt(d.style, d.hist.get());
         stack->Add(d.hist.get());
+        dp.objects.emplace_back(d.hist);
         if (d.style.mode & Style::Mode::Fill) {
             needs_fill = true;
         }
         ++i;
-        dp.objects.emplace_back(d.hist);
     }
     std::string hist_options = "";
-    if (!dp.master) {
+    if (dp.init) {
         hist_options += "SAME";
     }
     if (needs_fill) {
         hist_options += "hist";
     }
     stack->Draw(hist_options.c_str());
-    if (!dp.master) {
-        dp.master = stack->GetHistogram();
-    }
-    auto_range(dp, stack->GetMinimum(), stack->GetMaximum());
-    stack->SetMinimum(0.0001);
-    stack->SetMaximum(dp.max_y);
+    auto_range(dp, stack);
     applyCommonOptions(pad, options);
     applyCommonOptions(stack, options);
 }

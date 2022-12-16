@@ -67,6 +67,9 @@ void bindPlotting(sol::state &lua) {
     lua["transforms"]["sort_integral"] = [](std::vector<PlotData> &d) {
         transforms::sortIntegral(d.begin(), d.end());
     };
+    lua["transforms"]["remove_empty"] = [](std::vector<PlotData> &d) {
+        d.erase(transforms::removeEmpty(d.begin(), d.end()), d.end());
+    };
     lua["transforms"]["norm_to"] = [](std::vector<PlotData> &d, float val) {
         std::vector<PlotData> ret;
         ret.reserve(d.size());

@@ -5,6 +5,8 @@
 #include <THStack.h>
 #include <TLegend.h>
 
+#include <variant>
+
 #include "data.h"
 #include "style.h"
 
@@ -21,6 +23,11 @@ void createNormed(Iter begin, Iter end, IterOut out, float val) {
         return n;
     });
 }
+template <typename Iter>
+auto removeEmpty(Iter begin, Iter end) {
+    return std::remove_if(begin, end,
+                   [](const PlotData &p) { return p.hist->GetEntries() == 0; });
+}
 
 template <typename Iter>
 void sortIntegral(Iter begin, Iter end) {
@@ -32,7 +39,8 @@ void sortIntegral(Iter begin, Iter end) {
 
 struct DrawPad {
     std::unique_ptr<TVirtualPad> pad = std::make_unique<TCanvas>();
-    TH1 *master;
+    bool init = false;
+    std::variant<TH1 *, THStack *> master;
     float min_y, max_y;
     std::vector<std::shared_ptr<TObject>> objects;
 };
