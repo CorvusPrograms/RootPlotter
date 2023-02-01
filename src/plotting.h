@@ -6,6 +6,7 @@
 #include <TLegend.h>
 
 #include <variant>
+#include <functional>
 
 #include "data.h"
 #include "style.h"

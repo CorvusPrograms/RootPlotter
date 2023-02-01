@@ -14,7 +14,7 @@ add_compile_options(-Wall -Wextra -Wpedantic
   #-Wfloat-equal
   #-Wcovered-switch-default
 )
-add_link_options( -L /usr/local/lib -lprofiler)
+add_link_options( -L /usr/local/lib )
 add_compile_options( $<$<CONFIG:RELEASE>:-O3>
   $<$<CONFIG:DEBUG>:-O0>
   $<$<CONFIG:DEBUG>:-g>) 
