@@ -21,7 +21,7 @@ void setFillAtt(const Style &style, TAttFill *fill_att) {
 }
 
 void setMarkAtt(const Style &style, TAttMarker *mark_att) {
-    if (!(style.mode | Style::Mode::Marker)) {
+    if (!(style.mode & Style::Mode::Marker)) {
         return;
     }
     if (style.color) {
@@ -40,7 +40,7 @@ void setMarkAtt(const Style &style, TAttMarker *mark_att) {
 }
 
 void setLineAtt(const Style &style, TAttLine *line_att) {
-    if (!(style.mode | Style::Mode::Line)) {
+    if (!(style.mode & Style::Mode::Line)) {
         return;
     }
     if (style.color) {
@@ -137,7 +137,7 @@ void addToLegend(TLegend *l, const std::vector<PlotData> &data) {
     for (const auto &d : data) {
         l->AddEntry(d.hist.get(), d.source_name.c_str());
     }
-};
+}
 
 void addLegendToPad(TLegend *legend, DrawPad &p, int subpad) {
     p.pad->cd(subpad);
@@ -151,12 +151,11 @@ TLegend *newLegend(DrawPad &p) {
 
 void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
                const CommonOptions &options) {
+    if (data.empty()) return;
     auto pad = dp.pad.get();
     pad->cd(subpad);
     auto stack = new THStack;
-    int i = 0;
     bool needs_fill = false;
-    bool at_least_one = false;
     for (const PlotData &d : data) {
         applyCommonOptions(d.hist.get(), options);
         setMarkAtt(d.style, d.hist.get());
@@ -167,17 +166,15 @@ void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
         if (d.style.mode & Style::Mode::Fill) {
             needs_fill = true;
         }
-        ++i;
     }
     std::string hist_options = "";
-    if (dp.init) {
-        hist_options += "SAME";
-    }
-    if (needs_fill) {
-        hist_options += "hist";
-    }
+    if (dp.init) hist_options += "SAME";
+    if (needs_fill) hist_options += "hist";
+
     stack->Draw(hist_options.c_str());
+
     auto_range(dp, stack);
+
     applyCommonOptions(pad, options);
     applyCommonOptions(stack, options);
 }
@@ -193,7 +190,7 @@ void executePlot(DrawPad &p, const PlotDescription &plot) {
 
 namespace transforms {
 std::shared_ptr<TH1> normalize(const TH1 *hist, float val) {
-    auto ret = std::unique_ptr<TH1>(static_cast<TH1 *>(hist->Clone()));
+    auto ret = std::shared_ptr<TH1>(static_cast<TH1 *>(hist->Clone()));
     auto integral = ret->Integral();
     ret->Scale(val / integral);
     return ret;

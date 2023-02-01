@@ -80,6 +80,7 @@ function execute_deferred_plots()
          if VERBOSITY < 2 then
             io.write(string.rep(" ", 100) .. "\r")
          end
+         collectgarbage()
          io.write(string.format("Plotting [%d:%d/%d] -- %s%s", total, group,  #NEED_TO_PLOT, key,  VERBOSITY <2 and '\r' or '\n'))
          if VERBOSITY < 2 then
             io.flush()

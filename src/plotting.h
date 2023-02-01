@@ -18,15 +18,16 @@ std::shared_ptr<TH1> normalize(const TH1 *hist, float val);
 template <typename Iter, typename IterOut>
 void createNormed(Iter begin, Iter end, IterOut out, float val) {
     std::transform(begin, end, out, [val](const PlotData &p) {
-        PlotData n = p;
-        n.hist = normalize(p.hist.get(), val);
+        PlotData n{normalize(p.hist.get(), val), p.style, p.source_name,
+                   p.name};
         return n;
     });
 }
 template <typename Iter>
 auto removeEmpty(Iter begin, Iter end) {
-    return std::remove_if(begin, end,
-                   [](const PlotData &p) { return p.hist->GetEntries() == 0; });
+    return std::remove_if(begin, end, [](const PlotData &p) {
+        return p.hist->GetEntries() == 0;
+    });
 }
 
 template <typename Iter>
@@ -54,9 +55,9 @@ inline void setupLegend(TLegend *legend) {
     legend->Draw();
 }
 
-void setFillAtt(const Style &style, TAttFill *fill_att);
-void setMarkAtt(const Style &style, TAttMarker *mark_att);
-void setLineAtt(const Style &style, TAttLine *line_att);
+// void setFillAtt(const Style &style, TAttFill *fill_att);
+// void setMarkAtt(const Style &style, TAttMarker *mark_att);
+// void setLineAtt(const Style &style, TAttLine *line_att);
 
 struct CommonOptions {
     std::pair<float, float> xrange;

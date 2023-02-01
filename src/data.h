@@ -45,7 +45,6 @@ struct DataSource {
     Style style;
     TFile *file = nullptr;
 
-
     DataSource(const std::string &p, const std::string &n) : DataSource(p) {
         name = n;
     }

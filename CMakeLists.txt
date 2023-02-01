@@ -7,14 +7,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
 add_compile_options(-Wno-unused-variable)
-add_compile_options(-Wall -Wextra -pedantic -Wno-unused-variable -ftemplate-backtrace-limit=0)
+add_compile_options(-Wall -Wextra -Wpedantic
+  #-Wdouble-promotion
+  #-Wimplicit-int-conversion
+  #-Wimplicit-float-conversion
+  #-Wfloat-equal
+  #-Wcovered-switch-default
+)
 add_link_options( -L /usr/local/lib -lprofiler)
 add_compile_options( $<$<CONFIG:RELEASE>:-O3>
   $<$<CONFIG:DEBUG>:-O0>
   $<$<CONFIG:DEBUG>:-g>) 
 
 
-FetchContent_Declare( fmt
+FetchContent_Declare(fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt
   GIT_TAG b6f4ceaed0a0a24ccf575fab6c56dd50ccf6f1a9)
 
@@ -26,18 +32,13 @@ set(SOL2_ENABLE_INSTALL OFF)
 FetchContent_Declare(cli11
   GIT_REPOSITORY https://github.com/CLIUtils/CLI11
   GIT_TAG        v2.2.0)
-
 FetchContent_MakeAvailable(fmt sol2 cli11)
-
 find_package(ROOT 2.26 REQUIRED COMPONENTS RIO Core Hist Tree Thread)
-
 if(NOT ${ROOT_FOUND})
   message("Could not find system root, checking local install")
   include(/export/scratch/local/share/root/cmake/ROOTConfig.cmake)
 endif()
-
 find_package(Lua 5.3)
-
 if(NOT ${LUA_FOUND})
   FetchContent_Declare( lua URL http://www.lua.org/ftp/lua-5.4.4.tar.gz )
   FetchContent_GetProperties(lua)
@@ -112,7 +113,6 @@ target_link_libraries(plotter PUBLIC
   lua
   CLI11::CLI11
   install_config
-#  TracyClient
   )
 
 

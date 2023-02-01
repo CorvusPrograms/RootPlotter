@@ -32,7 +32,7 @@ std::shared_ptr<TH1> DataSource::getHist(const std::string &name) const {
     auto ret = std::shared_ptr<TH1>(
         static_cast<TH1 *>(file->Get<TH1>(name.c_str())->Clone()));
     return ret;
-};
+}
 
 void DataSource::load() {
     file = TFile::Open((path).c_str());

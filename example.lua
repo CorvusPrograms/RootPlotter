@@ -12,6 +12,6 @@ sig = SourceSet.new({rpv4,rpv6,rpv8})
 
 
 plot{sigbkg, "nbjets_*Lep", sig, bkg, Options:new():logy(true):y_label("Weight Events")}
-plot{simple_hist, "nbjets_*Lep", sig, 1 , Options:new():logy(false):y_label("Normed Events")}
+plot{simple_hist, "nbjets_*Lep", sig, 1, Options:new():logy(false):y_label("Normed Events")}
 
 
