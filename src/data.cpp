@@ -39,12 +39,32 @@ void DataSource::load() {
     if (!file) {
         vRuntimeError("Could not open file {}", path);
     }
+    if (!subdir.empty()) {
+        bool success = file->cd(subdir.c_str());
+        if (!success) {
+            vRuntimeError("Could not open file subdirectory {}", subdir);
+        }
+    }
 }
 
-void DataSource::loadKeys() {
+std::unordered_set<std::string> allKeys(TDirectory *file,
+                                        const std::string &current = "") {
+    std::unordered_set<std::string> keys;
     for (const auto &key : *(file->GetListOfKeys())) {
-        keys.insert(key->GetName());
+        if (key->IsFolder()) {
+            std::string next =
+                current + (current.empty() ? "" : "/") + key->GetName();
+            auto dir = file->Get<TDirectory>(key->GetName());
+            std::unordered_set<std::string> thisfolder = allKeys(dir, next);
+            keys.merge(thisfolder);
+        } else {
+            keys.insert(current + "/" + key->GetName());
+        }
     }
+    return keys;
+}
+void DataSource::loadKeys() {
+    keys = allKeys(file);
     vPrint(VerbosityLevel::High, "Extracted {} keys from file {}\n",
            std::size(keys), path);
     if (keys.empty()) {

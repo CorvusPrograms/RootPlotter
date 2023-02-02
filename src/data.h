@@ -41,12 +41,18 @@ struct DataSource {
 
     std::string path;
     std::string name;
+    std::string subdir;
 
     Style style;
     TFile *file = nullptr;
 
     DataSource(const std::string &p, const std::string &n) : DataSource(p) {
         name = n;
+    }
+    DataSource(const std::string &p, const std::string &n,
+               const std::string &s)
+        : DataSource(p, n) {
+        subdir = s;
     }
 
     DataSource(const std::string &p) : path{p} {

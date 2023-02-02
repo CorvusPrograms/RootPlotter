@@ -102,8 +102,8 @@ void auto_range(DrawPad &dp, T *other, float cutoff = 0.000001) {
             float old_max = x->GetMaximum();
             dp.min_y = std::min(old_min, other_min);
             dp.max_y = std::max(old_max, other_max);
-            x->SetMinimum(dp.min_y);
-            x->SetMaximum(dp.max_y);
+            x->SetMinimum(0.9 * dp.min_y);
+            x->SetMaximum(1.1 * dp.max_y);
         },
         dp.master);
     //  dp.master->SetMinimum(dp.min_y);

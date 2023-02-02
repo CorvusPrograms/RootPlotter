@@ -40,9 +40,10 @@ end
 function simple_hist(tbl)
    hist_glob = tbl[1]
    sig = tbl[2]
-   normed=tbl[3] or 1
+   normed=tbl[3]
    options = tbl[4]
    subpath = tbl[5]
+   titlefunc = tbl.title_func
    sig_set = get_histos(sig, hist_glob)
    for key,set in pairs(sig_set) do
       if normed then
@@ -52,7 +53,13 @@ function simple_hist(tbl)
       end
       dp = DrawPad:new()
       legend = plotting.new_legend(dp)
-      plotting.simple(dp, 0 , to_plot, options:plot_title(key))
+
+      if titlefunc then
+         plotting.simple(dp, 0 , to_plot, options:plot_title(titlefunc(key)))
+      else
+         plotting.simple(dp, 0 , to_plot, options:plot_title(key))
+      end
+
       plotting.add_to_legend(legend,  to_plot)
       plotting.add_legend_to_pad(legend, dp, 0);
       plotting.save_pad(dp, OUTPUT_BASE_PATH .. "/" .. subpath .. "/" .. key .. ".pdf")
