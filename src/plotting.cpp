@@ -40,9 +40,9 @@ void setMarkAtt(const Style &style, TAttMarker *mark_att) {
 }
 
 void setLineAtt(const Style &style, TAttLine *line_att) {
-    if (!(style.mode & Style::Mode::Line)) {
-        return;
-    }
+    // if (!(style.mode & Style::Mode::Line)) {
+    //     return;
+    // }
     if (style.color) {
         auto color = style.color.value();
         line_att->SetLineColor(color);
@@ -110,7 +110,8 @@ void auto_range(DrawPad &dp, T *other, float cutoff = 0.000001) {
     //  dp.master->SetMaximum(dp.max_y);
 }
 
-void plotStandard(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
+void plotStandard(DrawPad &dp, int subpad,
+                  const std::vector<PlotData<TH1>> &data,
                   const CommonOptions &options) {
     auto pad = dp.pad.get();
     pad->cd(subpad);
@@ -133,9 +134,27 @@ void plotStandard(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
     }
 }
 
-void addToLegend(TLegend *l, const std::vector<PlotData> &data) {
+void plotStandard2(DrawPad &dp, int subpad,
+                  const std::vector<PlotData<TH2>> &data,
+                  const CommonOptions &options) {
+    auto pad = dp.pad.get();
+    pad->cd(subpad);
+    int i = 0;
     for (const auto &d : data) {
-        l->AddEntry(d.hist.get(), d.source_name.c_str());
+        applyCommonOptions(d.hist.get(), options);
+        applyCommonOptions(pad, options);
+        dp.objects.emplace_back(d.hist);
+        setMarkAtt(d.style, d.hist.get());
+        setLineAtt(d.style, d.hist.get());
+        setFillAtt(d.style, d.hist.get());
+        if (d.hist->GetEntries() > 0) {
+            d.hist->Draw("Same COLZ");
+            auto_range(dp, d.hist.get());
+        }
+        d.hist->SetMinimum(dp.min_y);
+        d.hist->SetMaximum(dp.max_y);
+        ++i;
+        pad->Update();
     }
 }
 
@@ -149,14 +168,14 @@ TLegend *newLegend(DrawPad &p) {
     return legend;
 }
 
-void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
+void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData<TH1>> &data,
                const CommonOptions &options) {
     if (data.empty()) return;
     auto pad = dp.pad.get();
     pad->cd(subpad);
     auto stack = new THStack;
     bool needs_fill = false;
-    for (const PlotData &d : data) {
+    for (const auto &d : data) {
         applyCommonOptions(d.hist.get(), options);
         setMarkAtt(d.style, d.hist.get());
         setLineAtt(d.style, d.hist.get());
@@ -179,13 +198,23 @@ void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
     applyCommonOptions(stack, options);
 }
 
-void executePlot(DrawPad &p, const PlotDescription &plot) {
-    p.pad->Divide(plot.structure.first, plot.structure.second);
-    for (const auto &[pad_idx, desc] : plot.pads) {
-        for (const auto &[func, data] : desc.drawers) {
-            func(p, pad_idx, data, desc.options);
-        }
-    }
+// void executePlot(DrawPad &p, const PlotDescription &plot) {
+//     p.pad->Divide(plot.structure.first, plot.structure.second);
+//     for (const auto &[pad_idx, desc] : plot.pads) {
+//         for (const auto &[func, data] : desc.drawers) {
+//             func(p, pad_idx, data, desc.options);
+//         }
+//     }
+// }
+
+void setupLegend(TLegend *legend) {
+    legend->SetX1(0.65);
+    legend->SetY1(0.90 - 0.05 * (1 + legend->GetNRows()));
+    legend->SetX2(0.90);
+    legend->SetY2(0.90);
+    legend->SetTextSize(0.025);
+    legend->SetHeader("Samples", "C");
+    legend->Draw();
 }
 
 namespace transforms {

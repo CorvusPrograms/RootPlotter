@@ -12,6 +12,12 @@ struct Style {
     };
 
     Mode mode = Mode::Marker;
+    static int auto_pal_idx;
+
+    Style() {
+        palette_idx = auto_pal_idx;
+        auto_pal_idx += 100;
+    }
 
     using StyleId_t = int;
     std::optional<int> palette_idx = std::nullopt;

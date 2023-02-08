@@ -4,23 +4,14 @@ all_data_sources = {}
 
 for _,v in pairs(_G) do
    if type(v) == "userdata" then
-      print((getmetatable(v) or {}).__name)
       if string.find((getmetatable(v) or {}).__name or "", "DataSource" ) then
          table.insert(all_data_sources, v)
       end
     end
 end
 
-
-
 for k,v in ipairs(all_data_sources) do
-   print(v:name())
-end
-
-for k,v in ipairs(all_data_sources) do
-   print(v:name())
    table.insert(sources, v:name())
-   
    for _, kk in pairs(v:keys()) do
       keys[kk] = true
    end

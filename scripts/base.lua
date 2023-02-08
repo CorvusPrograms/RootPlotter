@@ -9,8 +9,10 @@ function co_wrapper(f, ... )
    return function ()
       local status, res  = coroutine.resume(co)
       return res
-    end
+   end
 end
+
+
 
 function sigbkg(tbl)
    hist_glob = tbl[1]
@@ -18,6 +20,7 @@ function sigbkg(tbl)
    bkg = tbl[3]
    options = tbl[4]
    subpath = tbl[5]
+   annotations=tbl.annotations
    sig_set = get_histos(sig, hist_glob)
    bkg_set = get_histos(bkg, hist_glob)
    for key,set in pairs(sig_set) do
@@ -44,6 +47,7 @@ function simple_hist(tbl)
    options = tbl[4]
    subpath = tbl[5]
    titlefunc = tbl.title_func
+   text=tbl.extra_text
    sig_set = get_histos(sig, hist_glob)
    for key,set in pairs(sig_set) do
       if normed then
@@ -58,6 +62,43 @@ function simple_hist(tbl)
          plotting.simple(dp, 0 , to_plot, options:plot_title(titlefunc(key)))
       else
          plotting.simple(dp, 0 , to_plot, options:plot_title(key))
+      end
+      for i, t in ipairs(text or {}) do
+         annotation.draw_text(dp, 0, t)
+      end
+
+      plotting.add_to_legend(legend,  to_plot)
+      plotting.add_legend_to_pad(legend, dp, 0);
+      plotting.save_pad(dp, OUTPUT_BASE_PATH .. "/" .. subpath .. "/" .. key .. ".pdf")
+      coroutine.yield(key)
+   end
+end
+
+function hist2(tbl)
+   hist_glob = tbl[1]
+   sig = tbl[2]
+   normed=tbl[3]
+   options = tbl[4]
+   subpath = tbl[5]
+   titlefunc = tbl.title_func
+   text=tbl.extra_text
+   sig_set = get_histos2(sig, hist_glob)
+   for key,set in pairs(sig_set) do
+      if normed then
+         to_plot = transforms.norm_to(set, normed)
+      else 
+         to_plot = set
+      end
+      dp = DrawPad:new()
+      legend = plotting.new_legend(dp)
+
+      if titlefunc then
+         plotting.simple2(dp, 0 , to_plot, options:plot_title(titlefunc(key)))
+      else
+         plotting.simple2(dp, 0 , to_plot, options:plot_title(key))
+      end
+      for i, t in ipairs(text or {}) do
+         annotation.draw_text(dp, 0, t)
       end
 
       plotting.add_to_legend(legend,  to_plot)

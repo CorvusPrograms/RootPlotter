@@ -5,8 +5,8 @@
 #include <THStack.h>
 #include <TLegend.h>
 
-#include <variant>
 #include <functional>
+#include <variant>
 
 #include "data.h"
 #include "style.h"
@@ -14,21 +14,27 @@
 namespace rootp {
 
 namespace transforms {
-std::shared_ptr<TH1> normalize(const TH1 *hist, float val);
+
+template <typename T>
+std::shared_ptr<T> normalize(const T *hist, float val) {
+    auto ret = std::shared_ptr<T>(static_cast<T *>(hist->Clone()));
+    auto integral = ret->Integral();
+    ret->Scale(val / integral);
+    return ret;
+}
 
 template <typename Iter, typename IterOut>
 void createNormed(Iter begin, Iter end, IterOut out, float val) {
-    std::transform(begin, end, out, [val](const PlotData &p) {
-        PlotData n{normalize(p.hist.get(), val), p.style, p.source_name,
-                   p.name};
+    std::transform(begin, end, out, [val](const auto &p) {
+        PlotData n(normalize(p.hist.get(), val), p.style, p.source_name,
+                   p.name);
         return n;
     });
 }
 template <typename Iter>
 auto removeEmpty(Iter begin, Iter end) {
-    return std::remove_if(begin, end, [](const PlotData &p) {
-        return p.hist->GetEntries() == 0;
-    });
+    return std::remove_if(
+        begin, end, [](const auto &p) { return p.hist->GetEntries() == 0; });
 }
 
 template <typename Iter>
@@ -47,14 +53,7 @@ struct DrawPad {
     std::vector<std::shared_ptr<TObject>> objects;
 };
 
-inline void setupLegend(TLegend *legend) {
-    legend->SetX1(0.7);
-    legend->SetY1(0.7);
-    legend->SetX2(0.90);
-    legend->SetY2(0.90);
-    legend->SetHeader("Samples", "C");
-    legend->Draw();
-}
+void setupLegend(TLegend *legend);
 
 // void setFillAtt(const Style &style, TAttFill *fill_att);
 // void setMarkAtt(const Style &style, TAttMarker *mark_att);
@@ -80,33 +79,45 @@ void applyCommonOptions(T *hist, const CommonOptions &opts) {
 
 void applyCommonOptions(TVirtualPad *pad, const CommonOptions &opts);
 
-void plotStandard(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
+void plotStandard(DrawPad &dp, int subpad,
+                  const std::vector<PlotData<TH1>> &data,
                   const CommonOptions &options);
-void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData> &data,
+
+void plotStandard2(DrawPad &dp, int subpad,
+                   const std::vector<PlotData<TH2>> &data,
+                   const CommonOptions &options);
+
+void plotStack(DrawPad &dp, int subpad, const std::vector<PlotData<TH1>> &data,
                const CommonOptions &options);
 
 TLegend *newLegend(DrawPad &p);
-void addToLegend(TLegend *, const std::vector<PlotData> &data);
+
+template <typename T>
+void addToLegend(TLegend *l, const std::vector<PlotData<T>> &data) {
+    for (const auto &d : data) {
+        l->AddEntry(d.hist.get(), d.source_name.c_str());
+    }
+}
 void addLegendToPad(TLegend *, DrawPad &p, int subpad);
 
 void savePadTo(TVirtualPad *p, const std::filesystem::path &path);
 void saveDrawPad(const DrawPad &p, const std::filesystem::path &path);
 void saveDrawPad(const DrawPad &p, const std::string &path);
 
-struct PadDescription {
-    using DrawFunc = std::function<void(DrawPad &dp, int subpad,
-                                        const std::vector<PlotData> &data,
-                                        const CommonOptions &options)>;
+// struct PadDescription {
+//     using DrawFunc = std::function<void(DrawPad &dp, int subpad,
+//                                         const std::vector<PlotData> &data,
+//                                         const CommonOptions &options)>;
+//
+//     CommonOptions options;
+//     std::vector<std::pair<DrawFunc, std::vector<PlotData>>> drawers;
+// };
+//
+// struct PlotDescription {
+//     std::pair<int, int> structure;
+//     std::unordered_map<int, PadDescription> pads;
+// };
 
-    CommonOptions options;
-    std::vector<std::pair<DrawFunc, std::vector<PlotData>>> drawers;
-};
-
-struct PlotDescription {
-    std::pair<int, int> structure;
-    std::unordered_map<int, PadDescription> pads;
-};
-
-void executePlot(DrawPad &p, const PlotDescription &plot);
+// void executePlot(DrawPad &p, const PlotDescription &plot);
 
 }  // namespace rootp

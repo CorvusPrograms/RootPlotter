@@ -104,6 +104,8 @@ add_executable(plotter
   src/main.cpp
   src/bindings.cpp
   src/plotting.cpp
+  src/annotations.cpp
+  src/style.cpp
 )
 target_include_directories(plotter PUBLIC ${CMAKE_BINARY_DIR}/generated)
 

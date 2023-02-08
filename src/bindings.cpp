@@ -2,9 +2,11 @@
 
 #include <TColor.h>
 #include <TFile.h>
+#include <TStyle.h>
 
 #include <sol/sol.hpp>
 
+#include "annotations.h"
 #include "data.h"
 #include "plotting.h"
 #include "util.h"
@@ -25,10 +27,12 @@ void bindDataOps(sol::state &lua) {
         BUILD(DataSource, tags), BUILD(DataSource, file),
         BUILD(DataSource, keys), "style", faststyle);
 
-    auto plot_data_type = lua.new_usertype<PlotData>(
-        "PlotData", "name", sol::readonly(&PlotData::name));
+    lua.new_usertype<PlotData<TH1>>("PlotData", "name",
+                                    sol::readonly(&PlotData<TH1>::name));
+    lua.new_usertype<PlotData<TH2>>("PlotData2", "name",
+                                    sol::readonly(&PlotData<TH2>::name));
 
-    auto source_set_type = lua.new_usertype<SourceSet>(
+    lua.new_usertype<SourceSet>(
         "SourceSet",
         sol::constructors<SourceSet(const std::vector<DataSource *>)>(),
         BUILD(SourceSet, sources), "get_keys", &SourceSet::getKeys);
@@ -39,8 +43,10 @@ void bindDataOps(sol::state &lua) {
         BUILD(Style, line_width), BUILD(Style, line_style),
         BUILD(Style, fill_style), BUILD(Style, color));
 
-    lua["get_histos"] = extractMatchingHistos;
+    lua["get_histos"] = extractMatchingHistos<TH1>;
+    lua["get_histos2"] = extractMatchingHistos<TH2>;
 }
+
 void bindPlotting(sol::state &lua) {
     auto draw_pad = lua.new_usertype<DrawPad>("DrawPad");
     auto draw_opts = lua.new_usertype<CommonOptions>(
@@ -48,35 +54,72 @@ void bindPlotting(sol::state &lua) {
         BUILD(CommonOptions, normalize), BUILD(CommonOptions, x_label),
         BUILD(CommonOptions, y_label), BUILD(CommonOptions, plot_title),
         BUILD(CommonOptions, xrange), BUILD(CommonOptions, yrange));
+
     lua["new_color"] = sol::overload(
         [](int r, int g, int b) { return TColor::GetColor(r, g, b); },
         [](float r, float g, float b) { return TColor::GetColor(r, g, b); },
         [](const std::string &hex) { return TColor::GetColor(hex.c_str()); });
 
     lua["plotting"] = lua.create_table();
+    lua["plotting"]["set_palette"] = [](int pal) { gStyle->SetPalette(pal); };
     lua["plotting"]["simple"] = plotStandard;
+    lua["plotting"]["simple2"] = plotStandard2;
     lua["plotting"]["stack"] = plotStack;
     lua["plotting"]["new_legend"] = newLegend;
-    lua["plotting"]["add_to_legend"] = addToLegend;
+    lua["plotting"]["add_to_legend"] =
+        sol::overload(addToLegend<TH1>, addToLegend<TH2>);
     lua["plotting"]["add_legend_to_pad"] = addLegendToPad;
     lua["plotting"]["save_pad"] =
         sol::resolve<void(const DrawPad &, const std::string &)>(saveDrawPad);
-    lua["plotting"]["execute_plot"] = executePlot;
 
     lua["transforms"] = lua.create_table();
-    lua["transforms"]["sort_integral"] = [](std::vector<PlotData> &d) {
-        transforms::sortIntegral(d.begin(), d.end());
-    };
-    lua["transforms"]["remove_empty"] = [](std::vector<PlotData> &d) {
-        d.erase(transforms::removeEmpty(d.begin(), d.end()), d.end());
-    };
-    lua["transforms"]["norm_to"] = [](std::vector<PlotData> &d, float val) {
-        std::vector<PlotData> ret;
-        ret.reserve(d.size());
-        transforms::createNormed(d.begin(), d.end(), std::back_inserter(ret),
-                                 val);
-        return ret;
-    };
+    lua["transforms"]["sort_integral"] = sol::overload(
+        [](std::vector<PlotData<TH1>> &d) {
+            transforms::sortIntegral(d.begin(), d.end());
+        },
+        [](std::vector<PlotData<TH2>> &d) {
+            transforms::sortIntegral(d.begin(), d.end());
+        });
+    lua["transforms"]["remove_empty"] = sol::overload(
+        [](std::vector<PlotData<TH1>> &d) {
+            d.erase(transforms::removeEmpty(d.begin(), d.end()), d.end());
+        },
+        [](std::vector<PlotData<TH2>> &d) {
+            d.erase(transforms::removeEmpty(d.begin(), d.end()), d.end());
+        });
+    lua["transforms"]["norm_to"] = sol::overload(
+        [](std::vector<PlotData<TH1>> &d, float val) {
+            std::vector<PlotData<TH1>> ret;
+            ret.reserve(d.size());
+            transforms::createNormed(d.begin(), d.end(),
+                                     std::back_inserter(ret), val);
+            return ret;
+        },
+        [](std::vector<PlotData<TH2>> &d, float val) {
+            std::vector<PlotData<TH2>> ret;
+            ret.reserve(d.size());
+            transforms::createNormed(d.begin(), d.end(),
+                                     std::back_inserter(ret), val);
+            return ret;
+        });
+
+    lua["annotation"] = lua.create_table();
+    lua["annotation"]["draw_text"] = addText;
+    lua["annotation"]["CanvasText"] = lua.new_usertype<CanvasText>(
+        "CanvasText",
+        sol::constructors<CanvasText(std::string, float, float)>(),
+        BUILD(CanvasText, size), BUILD(CanvasText, text),
+        BUILD(CanvasText, angle), "pos", [](CanvasText *c, float x, float y) {
+            c->x = x;
+            c->y = y;
+            return c;
+        });
+
+    lua["modes"] = lua.create_table_with(
+        "none", Style::Mode::None, "line", Style::Mode::Line, "maker",
+        Style::Mode::Marker, "fill", Style::Mode::Fill
+
+    );
 }
 
 void bindMarkerStyles(sol::state &lua) {
@@ -185,6 +228,12 @@ void bindPalettes(sol::state &lua) {
     lua["palettes"]["GistEarth"] = 111;
     lua["palettes"]["Viridis"] = 112;
     lua["palettes"]["Cividis"] = 113;
+
+    lua["colors"] = lua.create_table_with(
+        "kWhite", 0, "kBlack", 1, "kGray", 920, "kRed", 632, "kGreen", 416,
+        "kBlue", 600, "kYellow", 400, "kMagenta", 616, "kCyan", 432, "kOrange",
+        800, "kSpring", 820, "kTeal", 840, "kAzure", 860, "kViolet", 880,
+        "kPink", 900);
 }
 
 void bindLineStyles(sol::state &lua) {
@@ -200,6 +249,7 @@ void bindLineStyles(sol::state &lua) {
     lua["line_style"]["dashed"] = 9;
     lua["line_style"]["dotdashed"] = 10;
 }
+
 void bindFillStyles(sol::state &lua) {
     lua["fill_style"] = lua.create_table();
     lua["fill_style"]["hollow"] = 0;

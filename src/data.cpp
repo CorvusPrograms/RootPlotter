@@ -2,14 +2,15 @@
 
 #include <TFile.h>
 #include <TH1D.h>
+#include <TH2D.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
 #include <algorithm>
 #include <sol/sol.hpp>
 #include <thread>
+#include <typeinfo>
 
-#include "glob.hpp"
 #include "util.h"
 #include "verbosity.h"
 
@@ -75,23 +76,5 @@ void DataSource::loadKeys() {
     }
 }
 
-std::vector<PlotData> getData(const SourceSet &s, const std::string &name) {
-    std::vector<PlotData> ret;
-    for (const auto ds : s.getSources()) {
-        ret.push_back(getData(*ds, name));
-    }
-    return ret;
-}
 
-std::unordered_map<std::string, std::vector<PlotData>> extractMatchingHistos(
-    const SourceSet &set, const std::string &pattern) {
-    std::unordered_map<std::string, std::vector<PlotData>> ret;
-    for (const auto &k : set.common_keys) {
-        if (glob::match(k, pattern)) {
-            std::vector<PlotData> histos = getData(set, k);
-            ret.insert({k, std::move(histos)});
-        }
-    }
-    return ret;
-}
 }  // namespace rootp
