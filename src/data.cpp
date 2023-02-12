@@ -17,6 +17,7 @@
 namespace rootp {
 
 void SourceSet::initKeys() {
+    assert(!sources.empty());
     std::unordered_set<std::string> ret = sources[0]->keys;
     for (std::size_t i = 1; i < sources.size(); ++i) {
         for (const auto &k : sources[i]->keys) {

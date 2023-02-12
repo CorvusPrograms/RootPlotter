@@ -58,6 +58,17 @@ void setLineAtt(const Style &style, TAttLine *line_att) {
     }
 }
 
+std::string getStyleString(const Style &style) {
+    std::string ret;
+    if (style.mode & Style::Mode::Fill) {
+        ret += "HIST";
+    }
+    if (style.mode & Style::Mode::Line) {
+        ret += "E";
+    }
+    return ret;
+}
+
 void applyCommonOptions(TVirtualPad *pad, const CommonOptions &opts) {
     if (opts.logx) pad->SetLogx();
     if (opts.logy) pad->SetLogy();
@@ -124,7 +135,7 @@ void plotStandard(DrawPad &dp, int subpad,
         setLineAtt(d.style, d.hist.get());
         setFillAtt(d.style, d.hist.get());
         if (d.hist->GetEntries() > 0) {
-            d.hist->Draw("Same E");
+            d.hist->Draw((getStyleString(d.style) + " Same").c_str());
             auto_range(dp, d.hist.get());
         }
         d.hist->SetMinimum(dp.min_y);
@@ -135,8 +146,8 @@ void plotStandard(DrawPad &dp, int subpad,
 }
 
 void plotStandard2(DrawPad &dp, int subpad,
-                  const std::vector<PlotData<TH2>> &data,
-                  const CommonOptions &options) {
+                   const std::vector<PlotData<TH2>> &data,
+                   const CommonOptions &options) {
     auto pad = dp.pad.get();
     pad->cd(subpad);
     int i = 0;
@@ -216,6 +227,8 @@ void setupLegend(TLegend *legend) {
     legend->SetHeader("Samples", "C");
     legend->Draw();
 }
+
+void DrawPad::divide(int r, int c) { pad->Divide(r, c); }
 
 namespace transforms {
 std::shared_ptr<TH1> normalize(const TH1 *hist, float val) {

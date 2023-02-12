@@ -51,6 +51,7 @@ struct DrawPad {
     std::variant<TH1 *, THStack *> master;
     float min_y, max_y;
     std::vector<std::shared_ptr<TObject>> objects;
+    void divide(int r, int c);
 };
 
 void setupLegend(TLegend *legend);

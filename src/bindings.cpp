@@ -48,7 +48,9 @@ void bindDataOps(sol::state &lua) {
 }
 
 void bindPlotting(sol::state &lua) {
-    auto draw_pad = lua.new_usertype<DrawPad>("DrawPad");
+    auto draw_pad =
+        lua.new_usertype<DrawPad>("DrawPad", "divide", &DrawPad::divide);
+
     auto draw_opts = lua.new_usertype<CommonOptions>(
         "Options", BUILD(CommonOptions, logx), BUILD(CommonOptions, logy),
         BUILD(CommonOptions, normalize), BUILD(CommonOptions, x_label),

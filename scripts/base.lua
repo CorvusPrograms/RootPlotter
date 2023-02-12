@@ -12,7 +12,9 @@ function co_wrapper(f, ... )
    end
 end
 
-
+function sanfname(s)
+   return string.gsub(s,"/","__")
+end
 
 function sigbkg(tbl)
    hist_glob = tbl[1]
@@ -23,6 +25,8 @@ function sigbkg(tbl)
    annotations=tbl.annotations
    sig_set = get_histos(sig, hist_glob)
    bkg_set = get_histos(bkg, hist_glob)
+   save = tbl.save
+   if save == nil then save = true end
    for key,set in pairs(sig_set) do
       transforms.sort_integral(bkg_set[key])
       dp = DrawPad:new()
@@ -32,13 +36,15 @@ function sigbkg(tbl)
       plotting.add_to_legend(legend,  set)
       plotting.add_to_legend(legend,  bkg_set[key])
       plotting.add_legend_to_pad(legend, dp, 0);
-      plotting.save_pad(dp, OUTPUT_BASE_PATH .. "/" .. subpath .. "/".. key .. ".pdf")
+      if save then
+         plotting.save_pad(dp,
+                           OUTPUT_BASE_PATH .. "/"
+                           .. subpath .. "/"..
+                           sanfname(key) .. ".pdf")
+      end
       coroutine.yield(key)
    end
 end
-
-
-
 
 function simple_hist(tbl)
    hist_glob = tbl[1]
@@ -49,30 +55,57 @@ function simple_hist(tbl)
    titlefunc = tbl.title_func
    text=tbl.extra_text
    sig_set = get_histos(sig, hist_glob)
+   save = tbl.save
+   if save == nil then save = true end
    for key,set in pairs(sig_set) do
+      dp, pidx = table.unpack(tbl.pad or {DrawPad:new(), 0})
       if normed then
          to_plot = transforms.norm_to(set, normed)
       else 
          to_plot = set
       end
-      dp = DrawPad:new()
       legend = plotting.new_legend(dp)
 
       if titlefunc then
-         plotting.simple(dp, 0 , to_plot, options:plot_title(titlefunc(key)))
+         plotting.simple(dp, pidx , to_plot, options:plot_title(titlefunc(key)))
       else
-         plotting.simple(dp, 0 , to_plot, options:plot_title(key))
+         plotting.simple(dp, pidx , to_plot, options:plot_title(key))
       end
       for i, t in ipairs(text or {}) do
-         annotation.draw_text(dp, 0, t)
+         annotation.draw_text(dp, pidx, t)
       end
-
       plotting.add_to_legend(legend,  to_plot)
-      plotting.add_legend_to_pad(legend, dp, 0);
-      plotting.save_pad(dp, OUTPUT_BASE_PATH .. "/" .. subpath .. "/" .. key .. ".pdf")
+      plotting.add_legend_to_pad(legend, dp, pidx);
+      if save then
+
+         plotting.save_pad(dp,
+                           OUTPUT_BASE_PATH .. "/"
+                           .. subpath .. "/"..
+                           sanfname(key) .. ".pdf")
+      end
       coroutine.yield(key)
    end
 end
+
+function multihist(tbl)
+   shape = tbl.shape
+   len = #tbl.plots
+   subpath = tbl.subpath
+   savename= OUTPUT_BASE_PATH .. "/" .. "/" .. (tbl.savename or "random") .. ".pdf"
+   pad = DrawPad:new()
+   pad:divide(table.unpack(shape))
+   for i,args in ipairs(tbl.plots) do
+      local fun=args[1]
+      table.remove(args, 1)
+      args.pad = {pad, i}
+      args.save = false
+      fun(args)
+   end
+
+   plotting.save_pad(dp, savename)
+   coroutine.yield("multiplot")
+end
+
 
 function hist2(tbl)
    hist_glob = tbl[1]
@@ -83,6 +116,8 @@ function hist2(tbl)
    titlefunc = tbl.title_func
    text=tbl.extra_text
    sig_set = get_histos2(sig, hist_glob)
+   save = tbl.save
+   if save == nil then save = true end
    for key,set in pairs(sig_set) do
       if normed then
          to_plot = transforms.norm_to(set, normed)
@@ -90,8 +125,7 @@ function hist2(tbl)
          to_plot = set
       end
       dp = DrawPad:new()
-      legend = plotting.new_legend(dp)
-
+      -- legend = plotting.new_legend(dp)
       if titlefunc then
          plotting.simple2(dp, 0 , to_plot, options:plot_title(titlefunc(key)))
       else
@@ -101,9 +135,15 @@ function hist2(tbl)
          annotation.draw_text(dp, 0, t)
       end
 
-      plotting.add_to_legend(legend,  to_plot)
-      plotting.add_legend_to_pad(legend, dp, 0);
-      plotting.save_pad(dp, OUTPUT_BASE_PATH .. "/" .. subpath .. "/" .. key .. ".pdf")
+      if save then 
+         --plotting.add_to_legend(legend,  to_plot)
+         --plotting.add_legend_to_pad(legend, dp, 0);
+         plotting.save_pad(dp,
+                           OUTPUT_BASE_PATH .. "/"
+                           .. subpath .. "/"..
+                           sanfname(key) .. ".pdf")
+      end
+
       coroutine.yield(key)
    end
 end
